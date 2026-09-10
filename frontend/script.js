@@ -6,7 +6,11 @@ if(!API_KEY){
 }
 
 // ===== 2. SMART MODELS (ఒకటి fail అయితే next auto try) =====
-const MODELS = ["gemini-2.5-flash", "gemini-flash-latest"];
+const MODELS = [
+    "gemini-3.5-flash-lite",   // Fast
+    "gemini-3.1-flash-lite",   // Backup
+    "gemini-2.5-flash"         // Strong backup
+];
 
 const chat=document.getElementById('chat');
 const input=document.getElementById('msg');
