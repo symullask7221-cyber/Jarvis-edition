@@ -32,7 +32,7 @@ if (!API_KEY) {
     }
 }
 
-
+// Current model
 const MODELS = [
     "gemini-3.6-flash",
     "gemini-flash-latest"
