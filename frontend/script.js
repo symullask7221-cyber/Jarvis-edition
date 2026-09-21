@@ -1,504 +1,689 @@
-// =====================================================
-// J.A.R.V.I.S MOBILE EDITION
-// COMPLETE FRONTEND SCRIPT
-// =====================================================
-
 "use strict";
 
-// -----------------------------
-// ELEMENTS
-// -----------------------------
-const input = document.getElementById("msg");
-const chat = document.getElementById("chat");
+/* =====================================================
+   J.A.R.V.I.S MOBILE EDITION
+   STABLE FRONTEND SCRIPT
+   ===================================================== */
 
-const sendBtn = document.getElementById("send");
-const micBtn = document.getElementById("mic-btn");
-const camBtn = document.getElementById("cam-btn");
-const clearBtn = document.getElementById("clear-btn");
+document.addEventListener("DOMContentLoaded", () => {
 
-const imgInput = document.getElementById("cam-input");
+    /* ================= ELEMENTS ================= */
 
-// -----------------------------
-// GEMINI SETTINGS
-// -----------------------------
+    const input = document.getElementById("msg");
+    const chat = document.getElementById("chat");
 
-let API_KEY = localStorage.getItem("jarvis_key");
+    const sendBtn = document.getElementById("send");
+    const micBtn = document.getElementById("mic-btn");
+    const camBtn = document.getElementById("cam-btn");
+    const clearBtn = document.getElementById("clear-btn");
 
-if (!API_KEY) {
-    API_KEY = prompt("Enter your Gemini API Key:");
+    /* IMPORTANT: your HTML uses img-input */
+    const imgInput = document.getElementById("img-input");
 
-    if (API_KEY) {
-        localStorage.setItem("jarvis_key", API_KEY);
-    }
-}
 
-// Current model
-const MODEL = "gemini-3.8-flash";
+    /* ================= API KEY ================= */
 
-const API_URL =
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-    MODEL +
-    ":generateContent";
-
-// -----------------------------
-// MEMORY
-// -----------------------------
-
-let MEMORY = JSON.parse(
-    localStorage.getItem("jarvis_memory") || "[]"
-);
-
-function saveMemory() {
-    localStorage.setItem(
-        "jarvis_memory",
-        JSON.stringify(MEMORY)
-    );
-}
-
-// -----------------------------
-// CHAT DISPLAY
-// -----------------------------
-
-function addMessage(text, type = "ai") {
-
-    if (!chat) return;
-
-    const div = document.createElement("div");
-
-    div.className = "msg " + type;
-
-    div.textContent = text;
-
-    chat.appendChild(div);
-
-    chat.scrollTop = chat.scrollHeight;
-}
-
-// -----------------------------
-// GEMINI FUNCTION
-// -----------------------------
-
-async function askGemini(question, imageData = null) {
+    let API_KEY = localStorage.getItem("jarvis_key");
 
     if (!API_KEY) {
-        addMessage(
-            "J.A.R.V.I.S: Gemini API key is missing.",
-            "ai"
-        );
-        return;
+        API_KEY = prompt("Enter your Gemini API Key:");
+
+        if (API_KEY) {
+            localStorage.setItem("jarvis_key", API_KEY);
+        }
     }
 
-    addMessage("YOU: " + question, "user");
 
-    addMessage("J.A.R.V.I.S: Processing...", "ai");
+    /* ================= MODELS ================= */
+
+    const MODELS = [
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash"
+    ];
+
+
+    /* ================= MEMORY ================= */
+
+    let MEMORY = [];
 
     try {
-
-        const parts = [
-            {
-                text:
-                    "You are J.A.R.V.I.S, a helpful personal AI assistant. " +
-                    "Answer clearly and briefly. " +
-                    "User says: " + question
-            }
-        ];
-
-        // -----------------------------
-        // IMAGE INPUT
-        // -----------------------------
-
-        if (imageData) {
-
-            parts.push({
-                inline_data: {
-                    mime_type: imageData.mimeType,
-                    data: imageData.base64
-                }
-            });
-        }
-
-        const response = await fetch(
-            API_URL + "?key=" + encodeURIComponent(API_KEY),
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            role: "user",
-                            parts: parts
-                        }
-                    ]
-                })
-            }
+        MEMORY = JSON.parse(
+            localStorage.getItem("jarvis_memory") || "[]"
         );
 
-        const data = await response.json();
-
-        if (!response.ok) {
-
-            console.error("Gemini error:", data);
-
-            let errorText =
-                data?.error?.message ||
-                "Gemini API request failed.";
-
-            throw new Error(errorText);
+        if (!Array.isArray(MEMORY)) {
+            MEMORY = [];
         }
-
-        const answer =
-            data?.candidates?.[0]?.content?.parts
-                ?.map(part => part.text || "")
-                .join("")
-                .trim();
-
-        if (!answer) {
-            throw new Error(
-                "Gemini returned an empty response."
-            );
-        }
-
-        // Remove "Processing..." message
-        const messages =
-            chat ? chat.querySelectorAll(".msg") : [];
-
-        if (messages.length > 0) {
-            const last = messages[messages.length - 1];
-
-            if (
-                last.textContent.includes("Processing...")
-            ) {
-                last.remove();
-            }
-        }
-
-        addMessage(
-            "J.A.R.V.I.S: " + answer,
-            "ai"
-        );
-
-        // Save memory
-        MEMORY.push({
-            role: "user",
-            text: question
-        });
-
-        MEMORY.push({
-            role: "model",
-            text: answer
-        });
-
-        // Keep memory manageable
-        if (MEMORY.length > 30) {
-            MEMORY = MEMORY.slice(-30);
-        }
-
-        saveMemory();
-
-        // Voice response
-        speak(answer);
 
     } catch (error) {
+        MEMORY = [];
+    }
 
-        console.error(error);
+
+    function saveMemory() {
+
+        localStorage.setItem(
+            "jarvis_memory",
+            JSON.stringify(MEMORY)
+        );
+    }
+
+
+    /* ================= CHAT ================= */
+
+    function addMessage(text, type = "ai") {
+
+        if (!chat) {
+            console.error("Chat element not found.");
+            return;
+        }
+
+        const div = document.createElement("div");
+
+        div.className = "msg " + type;
+
+        div.textContent = text;
+
+        chat.appendChild(div);
+
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+
+    function removeProcessing() {
+
+        if (!chat) return;
 
         const messages =
-            chat ? chat.querySelectorAll(".msg") : [];
+            chat.querySelectorAll(".msg");
 
-        if (messages.length > 0) {
-            const last = messages[messages.length - 1];
+        messages.forEach(message => {
 
             if (
-                last.textContent.includes("Processing...")
+                message.textContent.includes(
+                    "Processing..."
+                )
             ) {
-                last.remove();
+                message.remove();
             }
+
+        });
+    }
+
+
+    /* ================= GEMINI ================= */
+
+    async function askGemini(question, imageData = null) {
+
+        if (!API_KEY) {
+
+            addMessage(
+                "J.A.R.V.I.S: API key is missing.",
+                "ai"
+            );
+
+            return;
         }
+
 
         addMessage(
-            "J.A.R.V.I.S ERROR: " + error.message,
+            "YOU: " + question,
+            "user"
+        );
+
+        addMessage(
+            "J.A.R.V.I.S: Processing...",
             "ai"
         );
-    }
-}
 
-// -----------------------------
-// EXECUTE BUTTON
-// -----------------------------
 
-if (sendBtn) {
+        let lastError = null;
 
-    sendBtn.addEventListener("click", function () {
 
-        const text = input?.value.trim();
+        for (const model of MODELS) {
 
-        if (!text) {
-            addMessage(
-                "J.A.R.V.I.S: Please enter a command.",
-                "ai"
-            );
-            return;
-        }
+            try {
 
-        input.value = "";
+                const parts = [
 
-        askGemini(text);
-    });
-}
+                    {
+                        text:
+                            "You are J.A.R.V.I.S, a helpful " +
+                            "personal AI assistant. " +
+                            "Answer clearly and naturally. " +
+                            "User says: " +
+                            question
+                    }
 
-// -----------------------------
-// ENTER KEY
-// -----------------------------
+                ];
 
-if (input) {
 
-    input.addEventListener("keydown", function (event) {
+                /* IMAGE */
 
-        if (event.key === "Enter") {
+                if (imageData) {
 
-            event.preventDefault();
+                    parts.push({
 
-            if (sendBtn) {
-                sendBtn.click();
-            }
-        }
-    });
-}
+                        inline_data: {
 
-// =====================================================
-// MICROPHONE
-// =====================================================
+                            mime_type:
+                                imageData.mimeType,
 
-let recognition = null;
+                            data:
+                                imageData.base64
+                        }
 
-const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
+                    });
 
-if (SpeechRecognition) {
+                }
 
-    recognition = new SpeechRecognition();
 
-    recognition.lang = "en-IN";
+                const url =
+                    "https://generativelanguage.googleapis.com/" +
+                    "v1beta/models/" +
+                    model +
+                    ":generateContent?key=" +
+                    encodeURIComponent(API_KEY);
 
-    recognition.continuous = false;
 
-    recognition.interimResults = false;
+                const response = await fetch(
 
-    recognition.onstart = function () {
+                    url,
 
-        if (micBtn) {
-            micBtn.textContent = "🔴";
-        }
-    };
+                    {
 
-    recognition.onend = function () {
+                        method: "POST",
 
-        if (micBtn) {
-            micBtn.textContent = "🎙️";
-        }
-    };
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
 
-    recognition.onresult = function (event) {
+                        body: JSON.stringify({
 
-        const text =
-            event.results[0][0].transcript;
+                            contents: [
 
-        if (input) {
-            input.value = text;
-        }
-    };
+                                {
+                                    role: "user",
 
-    recognition.onerror = function (event) {
+                                    parts: parts
+                                }
 
-        console.error(
-            "Speech recognition error:",
-            event.error
-        );
+                            ]
 
-        if (micBtn) {
-            micBtn.textContent = "🎙️";
-        }
-    };
-}
+                        })
 
-if (micBtn) {
+                    }
 
-    micBtn.addEventListener("click", function () {
-
-        if (!recognition) {
-
-            alert(
-                "Voice recognition is not supported by this browser."
-            );
-
-            return;
-        }
-
-        try {
-            recognition.start();
-        } catch (error) {
-            console.log(error);
-        }
-    });
-}
-
-// =====================================================
-// CAMERA
-// =====================================================
-
-// IMPORTANT:
-// HTML uses id="cam-input"
-// NOT id="img-input"
-
-if (camBtn && imgInput) {
-
-    camBtn.addEventListener("click", function () {
-
-        imgInput.click();
-
-    });
-}
-
-if (imgInput) {
-
-    imgInput.addEventListener(
-        "change",
-        function (event) {
-
-            const file =
-                event.target.files?.[0];
-
-            if (!file) return;
-
-            if (!file.type.startsWith("image/")) {
-
-                alert(
-                    "Please select an image file."
                 );
 
-                return;
-            }
 
-            const reader = new FileReader();
+                const data =
+                    await response.json();
 
-            reader.onload = function () {
 
-                const result =
-                    reader.result;
+                /* API ERROR */
 
-                const base64 =
-                    result.split(",")[1];
+                if (!response.ok) {
 
-                const mimeType =
-                    file.type;
+                    const message =
+                        data?.error?.message ||
+                        "Gemini request failed.";
+
+                    lastError =
+                        new Error(message);
+
+                    console.warn(
+                        "Model failed:",
+                        model,
+                        message
+                    );
+
+                    continue;
+                }
+
+
+                /* RESPONSE */
+
+                const answer =
+                    data
+                        ?.candidates?.[0]
+                        ?.content?.parts
+                        ?.map(part => part.text || "")
+                        .join("")
+                        .trim();
+
+
+                if (!answer) {
+
+                    lastError =
+                        new Error(
+                            "Gemini returned no answer."
+                        );
+
+                    continue;
+                }
+
+
+                /* SUCCESS */
+
+                removeProcessing();
 
                 addMessage(
-                    "YOU: 📸 Image selected",
-                    "user"
+                    "J.A.R.V.I.S: " + answer,
+                    "ai"
                 );
 
-                askGemini(
-                    "Analyze this image and describe what you see.",
-                    {
-                        base64: base64,
-                        mimeType: mimeType
-                    }
+
+                /* MEMORY */
+
+                MEMORY.push({
+
+                    role: "user",
+
+                    text: question
+
+                });
+
+
+                MEMORY.push({
+
+                    role: "model",
+
+                    text: answer
+
+                });
+
+
+                if (MEMORY.length > 30) {
+
+                    MEMORY =
+                        MEMORY.slice(-30);
+
+                }
+
+
+                saveMemory();
+
+
+                /* VOICE */
+
+                speak(answer);
+
+
+                return;
+
+            } catch (error) {
+
+                lastError = error;
+
+                console.error(
+                    "Request error:",
+                    error
                 );
-            };
 
-            reader.readAsDataURL(file);
-
-            // Allows selecting the same image again
-            imgInput.value = "";
-        }
-    );
-}
-
-// =====================================================
-// CLEAR MEMORY
-// =====================================================
-
-if (clearBtn) {
-
-    clearBtn.addEventListener(
-        "click",
-        function () {
-
-            MEMORY = [];
-
-            localStorage.removeItem(
-                "jarvis_memory"
-            );
-
-            if (chat) {
-                chat.innerHTML = "";
             }
 
-            addMessage(
-                "J.A.R.V.I.S: Memory cleared successfully.",
-                "ai"
-            );
         }
-    );
-}
 
-// =====================================================
-// TEXT TO SPEECH
-// =====================================================
 
-function speak(text) {
+        /* ALL MODELS FAILED */
 
-    if (!("speechSynthesis" in window)) {
-        return;
+        removeProcessing();
+
+
+        addMessage(
+
+            "J.A.R.V.I.S ERROR: " +
+            (lastError?.message ||
+             "Unable to connect to Gemini."),
+
+            "ai"
+
+        );
+
     }
 
-    window.speechSynthesis.cancel();
 
-    const speech =
-        new SpeechSynthesisUtterance(text);
+    /* ================= EXECUTE ================= */
 
-    speech.lang = "en-IN";
+    if (sendBtn) {
 
-    speech.rate = 0.95;
+        sendBtn.addEventListener(
+            "click",
+            () => {
 
-    speech.pitch = 0.8;
+                const text =
+                    input?.value.trim();
 
-    speech.volume = 1;
+                if (!text) {
 
-    window.speechSynthesis.speak(speech);
-}
+                    addMessage(
+                        "J.A.R.V.I.S: Please enter a command.",
+                        "ai"
+                    );
 
-// =====================================================
-// STARTUP
-// =====================================================
+                    return;
+                }
 
-console.log(
-    "J.A.R.V.I.S Mobile Edition loaded successfully."
-);
 
-console.log(
-    "Execute:",
-    !!sendBtn
-);
+                input.value = "";
 
-console.log(
-    "Microphone:",
-    !!micBtn
-);
+                askGemini(text);
 
-console.log(
-    "Camera:",
-    !!camBtn,
-    "Input:",
-    !!imgInput
-);
+            }
+        );
 
-console.log(
-    "Clear Memory:",
-    !!clearBtn
-);
+    }
+
+
+    /* ================= ENTER KEY ================= */
+
+    if (input) {
+
+        input.addEventListener(
+            "keydown",
+            event => {
+
+                if (event.key === "Enter") {
+
+                    event.preventDefault();
+
+                    sendBtn?.click();
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* ================= MICROPHONE ================= */
+
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+
+    let recognition = null;
+
+
+    if (SpeechRecognition) {
+
+        recognition =
+            new SpeechRecognition();
+
+        recognition.lang = "en-IN";
+
+        recognition.continuous = false;
+
+        recognition.interimResults = false;
+
+
+        recognition.onstart = () => {
+
+            if (micBtn) {
+                micBtn.textContent = "🔴";
+            }
+
+        };
+
+
+        recognition.onend = () => {
+
+            if (micBtn) {
+                micBtn.textContent = "🎙️";
+            }
+
+        };
+
+
+        recognition.onresult = event => {
+
+            const text =
+                event
+                    .results[0][0]
+                    .transcript;
+
+            if (input) {
+                input.value = text;
+            }
+
+        };
+
+
+        recognition.onerror = event => {
+
+            console.log(
+                "Voice error:",
+                event.error
+            );
+
+            if (micBtn) {
+                micBtn.textContent = "🎙️";
+            }
+
+        };
+
+    }
+
+
+    if (micBtn) {
+
+        micBtn.addEventListener(
+            "click",
+            () => {
+
+                if (!recognition) {
+
+                    alert(
+                        "Voice recognition is not supported in this browser."
+                    );
+
+                    return;
+                }
+
+
+                try {
+
+                    recognition.start();
+
+                } catch (error) {
+
+                    console.log(
+                        "Microphone:",
+                        error
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* ================= CAMERA ================= */
+
+    if (camBtn && imgInput) {
+
+        camBtn.addEventListener(
+            "click",
+            () => {
+
+                imgInput.click();
+
+            }
+        );
+
+    }
+
+
+    if (imgInput) {
+
+        imgInput.addEventListener(
+            "change",
+            event => {
+
+                const file =
+                    event.target.files?.[0];
+
+                if (!file) return;
+
+
+                if (!file.type.startsWith("image/")) {
+
+                    alert(
+                        "Please select an image."
+                    );
+
+                    return;
+                }
+
+
+                const reader =
+                    new FileReader();
+
+
+                reader.onload = () => {
+
+                    const result =
+                        reader.result;
+
+
+                    const base64 =
+                        result.split(",")[1];
+
+
+                    addMessage(
+                        "YOU: 📸 Image selected",
+                        "user"
+                    );
+
+
+                    askGemini(
+
+                        "Analyze this image and describe what you see.",
+
+                        {
+
+                            base64: base64,
+
+                            mimeType: file.type
+
+                        }
+
+                    );
+
+                };
+
+
+                reader.readAsDataURL(file);
+
+
+                /* allow same image again */
+
+                imgInput.value = "";
+
+            }
+        );
+
+    }
+
+
+    /* ================= CLEAR MEMORY ================= */
+
+    if (clearBtn) {
+
+        clearBtn.addEventListener(
+            "click",
+            () => {
+
+                MEMORY = [];
+
+                localStorage.removeItem(
+                    "jarvis_memory"
+                );
+
+
+                if (chat) {
+                    chat.innerHTML = "";
+                }
+
+
+                addMessage(
+                    "J.A.R.V.I.S: Memory cleared successfully.",
+                    "ai"
+                );
+
+            }
+        );
+
+    }
+
+
+    /* ================= TEXT TO SPEECH ================= */
+
+    function speak(text) {
+
+        if (
+            !("speechSynthesis" in window)
+        ) {
+            return;
+        }
+
+
+        window.speechSynthesis.cancel();
+
+
+        const speech =
+            new SpeechSynthesisUtterance(text);
+
+
+        speech.lang = "en-IN";
+
+        speech.rate = 0.95;
+
+        speech.pitch = 0.8;
+
+        speech.volume = 1;
+
+
+        window.speechSynthesis.speak(
+            speech
+        );
+
+    }
+
+
+    /* ================= STARTUP ================= */
+
+    console.log(
+        "J.A.R.V.I.S READY"
+    );
+
+    console.log(
+        "Execute:",
+        !!sendBtn
+    );
+
+    console.log(
+        "Microphone:",
+        !!micBtn
+    );
+
+    console.log(
+        "Camera:",
+        !!camBtn,
+        "Input:",
+        !!imgInput
+    );
+
+    console.log(
+        "Clear Memory:",
+        !!clearBtn
+    );
+
+});
