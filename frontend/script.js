@@ -32,8 +32,11 @@ if (!API_KEY) {
     }
 }
 
-// Current model
-const MODEL = "gemini-3.8-flash";
+
+const MODELS = [
+    "gemini-3.6-flash",
+    "gemini-flash-latest"
+];
 
 const API_URL =
     "https://generativelanguage.googleapis.com/v1beta/models/" +
