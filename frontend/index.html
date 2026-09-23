@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +17,8 @@
     <p>PERSONAL AI ASSISTANT</p>
   </header>
 
+
+  <!-- CORE -->
   <div class="core">
     <div class="ring r1"></div>
     <div class="ring r2"></div>
@@ -24,71 +27,88 @@
 
   <p class="core-text">SYSTEM READY</p>
 
+
+  <!-- SYSTEM STATUS -->
   <div class="status">
 
-    <h2>SYSTEM STATUS</h2>
+    <h2>SYSTEM DIAGNOSTICS</h2>
 
     <div class="row">
-      <span>AI CORE</span>
+      <span>AI ENGINE</span>
+      <b class="on">● OPERATIONAL</b>
+    </div>
+
+    <div class="row">
+      <span>CONNECTION</span>
       <b class="on">● ONLINE</b>
     </div>
 
     <div class="row">
-      <span>NETWORK</span>
-      <b class="on">● ONLINE</b>
+      <span>VOICE INTERFACE</span>
+      <b class="on">● READY</b>
     </div>
 
     <div class="row">
-      <span>VOICE</span>
-      <b class="on">● UNLOCKED</b>
-    </div>
-
-    <div class="row">
-      <span>MEMORY</span>
+      <span>LONG-TERM MEMORY</span>
       <b class="on">● ACTIVE</b>
     </div>
 
   </div>
 
-  <div id="chat" class="chat"></div>
 
+  <!-- CHAT -->
+  <div class="chat" id="chat"></div>
+
+
+  <!-- INPUT AREA -->
   <div class="input-area">
 
     <input
       id="msg"
       type="text"
       autocomplete="off"
-      placeholder="Talk to J.A.R.V.I.S..."
+      placeholder="Enter a command for J.A.R.V.I.S..."
     >
 
-    <button id="send" type="button">
+    <button id="send">
       EXECUTE
     </button>
 
-    <button id="mic-btn" type="button">
+    <button
+      id="mic-btn"
+      aria-label="Activate voice input"
+      type="button"
+    >
       🎙️
     </button>
 
-    <button id="cam-btn" type="button">
+    <button
+      id="cam-btn"
+      aria-label="Analyze image"
+      type="button"
+    >
       📷
     </button>
 
-    <button id="clear-btn" type="button">
-      CLEAR
+    <button
+      id="clear-btn"
+      type="button"
+    >
+      CLEAR MEMORY
     </button>
 
     <input
       id="img-input"
       type="file"
       accept="image/*"
-      capture="environment"
-      hidden
+      style="display:none"
     >
 
   </div>
 
-  <!-- ONLY SCRIPT -->
-  <script src="./script.js"></script>
+
+  <script src="script.js"></script>
 
 </body>
+
 </html>
