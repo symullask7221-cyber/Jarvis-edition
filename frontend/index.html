@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,58 +16,41 @@
     <p>PERSONAL AI ASSISTANT</p>
   </header>
 
-
-  <!-- CORE -->
-
   <div class="core">
     <div class="ring r1"></div>
     <div class="ring r2"></div>
     <div class="center"></div>
   </div>
 
-  <p class="core-text">
-    SYSTEM READY
-  </p>
-
-
-  <!-- SYSTEM STATUS -->
+  <p class="core-text">SYSTEM READY</p>
 
   <div class="status">
 
-    <h2>SYSTEM DIAGNOSTICS</h2>
+    <h2>SYSTEM STATUS</h2>
 
     <div class="row">
-      <span>AI ENGINE</span>
-      <b class="on">● OPERATIONAL</b>
-    </div>
-
-    <div class="row">
-      <span>CONNECTION</span>
+      <span>AI CORE</span>
       <b class="on">● ONLINE</b>
     </div>
 
     <div class="row">
-      <span>VOICE INTERFACE</span>
-      <b class="on">● READY</b>
+      <span>NETWORK</span>
+      <b class="on">● ONLINE</b>
     </div>
 
     <div class="row">
-      <span>LONG-TERM MEMORY</span>
+      <span>VOICE</span>
+      <b class="on">● UNLOCKED</b>
+    </div>
+
+    <div class="row">
+      <span>MEMORY</span>
       <b class="on">● ACTIVE</b>
     </div>
 
   </div>
 
-
-  <!-- CHAT -->
-
-  <div
-    class="chat"
-    id="chat"
-  ></div>
-
-
-  <!-- INPUT AREA -->
+  <div id="chat" class="chat"></div>
 
   <div class="input-area">
 
@@ -76,43 +58,24 @@
       id="msg"
       type="text"
       autocomplete="off"
-      placeholder="Enter a command for J.A.R.V.I.S..."
+      placeholder="Talk to J.A.R.V.I.S..."
     >
 
-
-    <button
-      id="send"
-      type="button"
-    >
+    <button id="send" type="button">
       EXECUTE
     </button>
 
-
-    <button
-      id="mic-btn"
-      type="button"
-      aria-label="Voice input"
-    >
+    <button id="mic-btn" type="button">
       🎙️
     </button>
 
-
-    <button
-      id="cam-btn"
-      type="button"
-      aria-label="Camera"
-    >
+    <button id="cam-btn" type="button">
       📷
     </button>
 
-
-    <button
-      id="clear-btn"
-      type="button"
-    >
-      CLEAR MEMORY
+    <button id="clear-btn" type="button">
+      CLEAR
     </button>
-
 
     <input
       id="img-input"
@@ -124,11 +87,8 @@
 
   </div>
 
-
-  <!-- ONLY SCRIPT.JS -->
-
-  <script src="script.js"></script>
+  <!-- ONLY SCRIPT -->
+  <script src="./script.js"></script>
 
 </body>
-
 </html>
