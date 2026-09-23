@@ -18,6 +18,23 @@ const MODEL =
 
 
 // ==========================================
+// PERMANENT MEMORY
+// ==========================================
+
+let JARVIS_MEMORY = JSON.parse(
+  localStorage.getItem("jarvis_memory") || "{}"
+);
+
+
+// ==========================================
+// CHAT HISTORY
+// ==========================================
+
+const CHAT_STORAGE_KEY =
+  "jarvis_chat";
+
+
+// ==========================================
 // ELEMENTS
 // ==========================================
 
@@ -44,13 +61,168 @@ const imageInput =
 
 
 // ==========================================
+// MEMORY SAVE
+// ==========================================
+
+function saveMemory() {
+
+  localStorage.setItem(
+    "jarvis_memory",
+    JSON.stringify(JARVIS_MEMORY)
+  );
+
+}
+
+
+// ==========================================
+// GET MEMORY CONTEXT
+// ==========================================
+
+function getMemoryContext() {
+
+  let context = "";
+
+  if (JARVIS_MEMORY.name) {
+
+    context +=
+      `The user's name is ${JARVIS_MEMORY.name}.\n`;
+
+  }
+
+  return context;
+
+}
+
+
+// ==========================================
+// MEMORY COMMAND PROCESSOR
+// ==========================================
+
+function processMemoryCommand(command) {
+
+  const text =
+    command.trim();
+
+  const lower =
+    text.toLowerCase();
+
+
+  // ========================================
+  // REMEMBER MY NAME
+  // ========================================
+
+  const nameMatch =
+    text.match(
+      /remember\s+(?:my\s+)?name\s+is\s+(.+)/i
+    );
+
+
+  if (nameMatch) {
+
+    let name =
+      nameMatch[1]
+        .trim()
+        .replace(/[.!?]+$/, "");
+
+
+    // Remove common words accidentally included
+    name =
+      name
+        .replace(/^called\s+/i, "")
+        .trim();
+
+
+    JARVIS_MEMORY.name =
+      name;
+
+
+    saveMemory();
+
+
+    return (
+      `I will remember that, Boss. Your name is ${name}.`
+    );
+
+  }
+
+
+  // ========================================
+  // WHAT IS MY NAME?
+  // ========================================
+
+  if (
+    lower === "what is my name" ||
+    lower === "what's my name" ||
+    lower === "whats my name" ||
+    lower === "do you remember my name" ||
+    lower === "do you know my name" ||
+    lower === "tell me my name" ||
+    lower.includes("remember my name")
+  ) {
+
+    if (
+      JARVIS_MEMORY.name
+    ) {
+
+      return (
+        `Your name is ${JARVIS_MEMORY.name}, Boss.`
+      );
+
+    }
+
+
+    return (
+      "You haven't told me your name yet, Boss."
+    );
+
+  }
+
+
+  // ========================================
+  // WHO AM I?
+  // ========================================
+
+  if (
+    lower === "who am i" ||
+    lower === "who am i?"
+  ) {
+
+    if (
+      JARVIS_MEMORY.name
+    ) {
+
+      return (
+        `You are ${JARVIS_MEMORY.name}, Boss.`
+      );
+
+    }
+
+
+    return (
+      "I don't have your name in my memory yet, Boss."
+    );
+
+  }
+
+
+  // No memory command
+  return null;
+
+}
+
+
+// ==========================================
 // SPEAK
 // ==========================================
 
 function speak(text) {
 
-  if (!("speechSynthesis" in window)) {
+  if (
+    !("speechSynthesis" in window)
+  ) {
+
     return;
+
   }
 
 
@@ -61,9 +233,14 @@ function speak(text) {
     new SpeechSynthesisUtterance(text);
 
 
-  speech.rate = 0.92;
-  speech.pitch = 0.75;
-  speech.volume = 1;
+  speech.rate =
+    0.92;
+
+  speech.pitch =
+    0.75;
+
+  speech.volume =
+    1;
 
 
   const voices =
@@ -77,13 +254,17 @@ function speak(text) {
 
 
   if (voice) {
-    speech.voice = voice;
+
+    speech.voice =
+      voice;
+
   }
 
 
   window.speechSynthesis.speak(
     speech
   );
+
 }
 
 
@@ -124,6 +305,7 @@ function addMessage(
 
 
   box.appendChild(title);
+
   box.appendChild(text);
 
 
@@ -135,6 +317,7 @@ function addMessage(
 
 
   saveChat();
+
 }
 
 
@@ -148,9 +331,10 @@ function saveChat() {
 
 
   localStorage.setItem(
-    "jarvis_chat",
+    CHAT_STORAGE_KEY,
     chat.innerHTML
   );
+
 }
 
 
@@ -162,7 +346,7 @@ function loadChat() {
 
   const saved =
     localStorage.getItem(
-      "jarvis_chat"
+      CHAT_STORAGE_KEY
     );
 
 
@@ -177,7 +361,9 @@ function loadChat() {
 
     chat.scrollTop =
       chat.scrollHeight;
+
   }
+
 }
 
 
@@ -185,34 +371,74 @@ function loadChat() {
 // GEMINI API
 // ==========================================
 
-async function callGemini(prompt) {
+async function callGemini(userPrompt) {
+
+  // ========================================
+  // API KEY
+  // ========================================
 
   if (!API_KEY) {
 
-    API_KEY =
-      prompt(
+    const enteredKey =
+      window.prompt(
         "Enter your Gemini API Key:"
       );
 
 
-    if (!API_KEY) {
+    if (!enteredKey) {
 
       return (
         "Gemini API key is required, Boss."
       );
+
     }
 
 
     API_KEY =
-      API_KEY.trim();
+      enteredKey.trim();
 
 
     localStorage.setItem(
       "jarvis_key",
       API_KEY
     );
+
   }
 
+
+  // ========================================
+  // MEMORY CONTEXT
+  // ========================================
+
+  const memoryContext =
+    getMemoryContext();
+
+
+  // ========================================
+  // JARVIS SYSTEM INSTRUCTION
+  // ========================================
+
+  const systemText = `
+You are J.A.R.V.I.S, the user's personal AI assistant.
+
+Always address the user as Boss.
+
+Be concise, friendly and useful.
+
+PERMANENT USER MEMORY:
+${memoryContext}
+
+If the user's name is present in permanent memory,
+you know the user's name and may use it when appropriate.
+
+Do not claim that you forgot information that is present
+in permanent memory.
+`;
+
+
+  // ========================================
+  // GEMINI URL
+  // ========================================
 
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
@@ -224,50 +450,67 @@ async function callGemini(prompt) {
       await fetch(
         url,
         {
-          method: "POST",
+
+          method:
+            "POST",
 
           headers: {
+
             "Content-Type":
               "application/json",
 
             "x-goog-api-key":
               API_KEY
+
           },
 
 
-          body: JSON.stringify({
+          body:
+            JSON.stringify({
 
-            systemInstruction: {
-
-              parts: [
-                {
-                  text:
-                    "You are J.A.R.V.I.S, a helpful personal AI assistant. Address the user as Boss. Be concise, friendly and useful."
-                }
-              ]
-
-            },
-
-
-            contents: [
-
-              {
-                role: "user",
+              systemInstruction: {
 
                 parts: [
+
                   {
-                    text: prompt
+                    text:
+                      systemText
                   }
+
                 ]
-              }
 
-            ]
+              },
 
-          })
+
+              contents: [
+
+                {
+
+                  role:
+                    "user",
+
+                  parts: [
+
+                    {
+                      text:
+                        userPrompt
+                    }
+
+                  ]
+
+                }
+
+              ]
+
+            })
 
         }
       );
 
+
+    // ======================================
+    // ERROR HANDLING
+    // ======================================
 
     if (!response.ok) {
 
@@ -281,6 +524,7 @@ async function callGemini(prompt) {
       );
 
 
+      // Invalid API key
       if (
         response.status === 401 ||
         response.status === 403
@@ -290,15 +534,18 @@ async function callGemini(prompt) {
           "jarvis_key"
         );
 
-        API_KEY = "";
+        API_KEY =
+          "";
 
 
         return (
           "Your Gemini API key is invalid, Boss."
         );
+
       }
 
 
+      // Quota
       if (
         response.status === 429
       ) {
@@ -306,14 +553,20 @@ async function callGemini(prompt) {
         return (
           "Gemini quota is currently unavailable, Boss."
         );
+
       }
 
 
       return (
         "Gemini service error, Boss."
       );
+
     }
 
+
+    // ======================================
+    // RESPONSE
+    // ======================================
 
     const data =
       await response.json();
@@ -323,7 +576,8 @@ async function callGemini(prompt) {
       data?.candidates?.[0]
         ?.content?.parts
         ?.map(
-          part => part.text || ""
+          part =>
+            part.text || ""
         )
         .join("")
         .trim();
@@ -334,6 +588,7 @@ async function callGemini(prompt) {
       return (
         "I did not receive a response from Gemini, Boss."
       );
+
     }
 
 
@@ -351,7 +606,9 @@ async function callGemini(prompt) {
     return (
       "I could not connect to Gemini, Boss."
     );
+
   }
+
 }
 
 
@@ -375,8 +632,13 @@ async function executeCommand() {
     );
 
     return;
+
   }
 
+
+  // ========================================
+  // SHOW USER COMMAND
+  // ========================================
 
   addMessage(
     "YOU",
@@ -384,17 +646,48 @@ async function executeCommand() {
   );
 
 
-  input.value = "";
+  input.value =
+    "";
 
 
   try {
 
     // ======================================
-    // 🤖 AGENT
+    // 🧠 PERMANENT MEMORY FIRST
+    // ======================================
+
+    const memoryResult =
+      processMemoryCommand(
+        command
+      );
+
+
+    if (memoryResult) {
+
+      addMessage(
+        "J.A.R.V.I.S",
+        memoryResult
+      );
+
+
+      speak(
+        memoryResult
+      );
+
+
+      return;
+
+    }
+
+
+    // ======================================
+    // 🤖 AI AGENT
     // ======================================
 
     const agentResult =
-      await runAgent(command);
+      await runAgent(
+        command
+      );
 
 
     if (agentResult) {
@@ -411,6 +704,7 @@ async function executeCommand() {
 
 
       return;
+
     }
 
 
@@ -456,7 +750,9 @@ async function executeCommand() {
     speak(
       message
     );
+
   }
+
 }
 
 
@@ -464,7 +760,8 @@ async function executeCommand() {
 // VOICE RECOGNITION
 // ==========================================
 
-let recognition = null;
+let recognition =
+  null;
 
 
 function startListening() {
@@ -481,6 +778,7 @@ function startListening() {
     );
 
     return;
+
   }
 
 
@@ -504,8 +802,10 @@ function startListening() {
     () => {
 
       if (micBtn) {
+
         micBtn.textContent =
           "🔴";
+
       }
 
     };
@@ -550,12 +850,14 @@ function startListening() {
 
         micBtn.textContent =
           "🎙️";
+
       }
 
     };
 
 
   recognition.start();
+
 }
 
 
@@ -566,11 +868,14 @@ function startListening() {
 function openCamera() {
 
   if (!imageInput) {
+
     return;
+
   }
 
 
   imageInput.click();
+
 }
 
 
@@ -585,7 +890,9 @@ if (imageInput) {
 
 
       if (!file) {
+
         return;
+
       }
 
 
@@ -606,6 +913,7 @@ if (imageInput) {
 
     }
   );
+
 }
 
 
@@ -619,6 +927,7 @@ if (sendBtn) {
     "click",
     executeCommand
   );
+
 }
 
 
@@ -639,10 +948,12 @@ if (input) {
         event.preventDefault();
 
         executeCommand();
+
       }
 
     }
   );
+
 }
 
 
@@ -656,6 +967,7 @@ if (micBtn) {
     "click",
     startListening
   );
+
 }
 
 
@@ -669,6 +981,7 @@ if (camBtn) {
     "click",
     openCamera
   );
+
 }
 
 
@@ -682,19 +995,34 @@ if (clearBtn) {
     "click",
     () => {
 
+      // Clear permanent memory
       localStorage.removeItem(
         "jarvis_memory"
       );
 
 
+      // Clear old memory key if present
       localStorage.removeItem(
-        "jarvis_chat"
+        "jarvis_permanent_memory"
       );
 
 
+      // Clear chat history
+      localStorage.removeItem(
+        CHAT_STORAGE_KEY
+      );
+
+
+      // Reset memory object
+      JARVIS_MEMORY =
+        {};
+
+
       if (chat) {
+
         chat.innerHTML =
           "";
+
       }
 
 
@@ -704,6 +1032,7 @@ if (clearBtn) {
 
     }
   );
+
 }
 
 
@@ -729,6 +1058,7 @@ if (
         .getVoices();
 
     };
+
 }
 
 
@@ -742,4 +1072,8 @@ console.log(
 
 console.log(
   "🤖 AI AGENT ONLINE"
+);
+
+console.log(
+  "🧠 PERMANENT MEMORY ONLINE"
 );
