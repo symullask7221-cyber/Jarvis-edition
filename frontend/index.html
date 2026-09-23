@@ -19,16 +19,20 @@
 
 
   <!-- CORE -->
+
   <div class="core">
     <div class="ring r1"></div>
     <div class="ring r2"></div>
     <div class="center"></div>
   </div>
 
-  <p class="core-text">SYSTEM READY</p>
+  <p class="core-text">
+    SYSTEM READY
+  </p>
 
 
-  <!-- SYSTEM DIAGNOSTICS -->
+  <!-- SYSTEM STATUS -->
+
   <div class="status">
 
     <h2>SYSTEM DIAGNOSTICS</h2>
@@ -53,19 +57,19 @@
       <b class="on">● ACTIVE</b>
     </div>
 
-    <div class="row">
-      <span>AI AGENT</span>
-      <b class="on">● ONLINE</b>
-    </div>
-
   </div>
 
 
   <!-- CHAT -->
-  <div class="chat" id="chat"></div>
+
+  <div
+    class="chat"
+    id="chat"
+  ></div>
 
 
-  <!-- INPUT -->
+  <!-- INPUT AREA -->
+
   <div class="input-area">
 
     <input
@@ -75,25 +79,32 @@
       placeholder="Enter a command for J.A.R.V.I.S..."
     >
 
-    <button id="send" type="button">
+
+    <button
+      id="send"
+      type="button"
+    >
       EXECUTE
     </button>
+
 
     <button
       id="mic-btn"
       type="button"
-      aria-label="Activate voice input"
+      aria-label="Voice input"
     >
       🎙️
     </button>
 
+
     <button
       id="cam-btn"
       type="button"
-      aria-label="Analyze image"
+      aria-label="Camera"
     >
       📷
     </button>
+
 
     <button
       id="clear-btn"
@@ -102,23 +113,22 @@
       CLEAR MEMORY
     </button>
 
+
     <input
       id="img-input"
       type="file"
       accept="image/*"
-      style="display:none"
+      capture="environment"
+      hidden
     >
 
   </div>
 
 
-  <!-- IMPORTANT:
-       AGENT FIRST
-       SCRIPT SECOND
-  -->
+  <!-- ONLY SCRIPT.JS -->
 
-  <script src="agent.js"></script>
   <script src="script.js"></script>
 
 </body>
+
 </html>
