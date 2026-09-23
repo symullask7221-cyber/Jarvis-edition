@@ -1,13 +1,13 @@
 // ==========================================
 // J.A.R.V.I.S MOBILE EDITION
-// MAIN SCRIPT
+// CLEAN MAIN SCRIPT
 // ==========================================
 
-console.log("J.A.R.V.I.S SCRIPT LOADING...");
+console.log("J.A.R.V.I.S starting...");
 
 
 // ==========================================
-// GEMINI SETTINGS
+// GEMINI
 // ==========================================
 
 let API_KEY =
@@ -18,20 +18,12 @@ const MODEL =
 
 
 // ==========================================
-// PERMANENT MEMORY
+// MEMORY
 // ==========================================
 
-let JARVIS_MEMORY = JSON.parse(
+let MEMORY = JSON.parse(
   localStorage.getItem("jarvis_memory") || "{}"
 );
-
-
-// ==========================================
-// CHAT HISTORY
-// ==========================================
-
-const CHAT_STORAGE_KEY =
-  "jarvis_chat";
 
 
 // ==========================================
@@ -61,152 +53,102 @@ const imageInput =
 
 
 // ==========================================
-// MEMORY SAVE
+// SAVE MEMORY
 // ==========================================
 
 function saveMemory() {
 
   localStorage.setItem(
     "jarvis_memory",
-    JSON.stringify(JARVIS_MEMORY)
+    JSON.stringify(MEMORY)
   );
 
 }
 
 
 // ==========================================
-// GET MEMORY CONTEXT
+// SAVE CHAT
 // ==========================================
 
-function getMemoryContext() {
+function saveChat() {
 
-  let context = "";
+  if (!chat) return;
 
-  if (JARVIS_MEMORY.name) {
-
-    context +=
-      `The user's name is ${JARVIS_MEMORY.name}.\n`;
-
-  }
-
-  return context;
+  localStorage.setItem(
+    "jarvis_chat",
+    chat.innerHTML
+  );
 
 }
 
 
 // ==========================================
-// MEMORY COMMAND PROCESSOR
+// LOAD CHAT
 // ==========================================
 
-function processMemoryCommand(command) {
+function loadChat() {
+
+  if (!chat) return;
+
+  const saved =
+    localStorage.getItem("jarvis_chat");
+
+  if (saved) {
+
+    chat.innerHTML =
+      saved;
+
+    chat.scrollTop =
+      chat.scrollHeight;
+  }
+
+}
+
+
+// ==========================================
+// ADD MESSAGE
+// ==========================================
+
+function addMessage(
+  sender,
+  message
+) {
+
+  if (!chat) return;
+
+
+  const box =
+    document.createElement("div");
+
+  box.className =
+    "message";
+
+
+  const title =
+    document.createElement("strong");
+
+  title.textContent =
+    sender + ":";
+
 
   const text =
-    command.trim();
+    document.createElement("span");
 
-  const lower =
-    text.toLowerCase();
-
-
-  // ========================================
-  // REMEMBER MY NAME
-  // ========================================
-
-  const nameMatch =
-    text.match(
-      /remember\s+(?:my\s+)?name\s+is\s+(.+)/i
-    );
+  text.textContent =
+    " " + message;
 
 
-  if (nameMatch) {
+  box.appendChild(title);
+  box.appendChild(text);
 
-    let name =
-      nameMatch[1]
-        .trim()
-        .replace(/[.!?]+$/, "");
+  chat.appendChild(box);
 
 
-    // Remove common words accidentally included
-    name =
-      name
-        .replace(/^called\s+/i, "")
-        .trim();
+  chat.scrollTop =
+    chat.scrollHeight;
 
 
-    JARVIS_MEMORY.name =
-      name;
-
-
-    saveMemory();
-
-
-    return (
-      `I will remember that, Boss. Your name is ${name}.`
-    );
-
-  }
-
-
-  // ========================================
-  // WHAT IS MY NAME?
-  // ========================================
-
-  if (
-    lower === "what is my name" ||
-    lower === "what's my name" ||
-    lower === "whats my name" ||
-    lower === "do you remember my name" ||
-    lower === "do you know my name" ||
-    lower === "tell me my name" ||
-    lower.includes("remember my name")
-  ) {
-
-    if (
-      JARVIS_MEMORY.name
-    ) {
-
-      return (
-        `Your name is ${JARVIS_MEMORY.name}, Boss.`
-      );
-
-    }
-
-
-    return (
-      "You haven't told me your name yet, Boss."
-    );
-
-  }
-
-
-  // ========================================
-  // WHO AM I?
-  // ========================================
-
-  if (
-    lower === "who am i" ||
-    lower === "who am i?"
-  ) {
-
-    if (
-      JARVIS_MEMORY.name
-    ) {
-
-      return (
-        `You are ${JARVIS_MEMORY.name}, Boss.`
-      );
-
-    }
-
-
-    return (
-      "I don't have your name in my memory yet, Boss."
-    );
-
-  }
-
-
-  // No memory command
-  return null;
+  saveChat();
 
 }
 
@@ -222,7 +164,6 @@ function speak(text) {
   ) {
 
     return;
-
   }
 
 
@@ -248,8 +189,11 @@ function speak(text) {
 
 
   const voice =
-    voices.find(v =>
-      /en-US|en-GB|English/i.test(v.lang)
+    voices.find(
+      voice =>
+        /en-US|en-GB/i.test(
+          voice.lang
+        )
     );
 
 
@@ -269,100 +213,99 @@ function speak(text) {
 
 
 // ==========================================
-// ADD MESSAGE
+// MEMORY COMMANDS
 // ==========================================
 
-function addMessage(
-  sender,
-  message
-) {
-
-  if (!chat) return;
-
-
-  const box =
-    document.createElement("div");
-
-
-  box.className =
-    "message";
-
-
-  const title =
-    document.createElement("strong");
-
-
-  title.textContent =
-    sender + ":";
-
+function checkMemory(command) {
 
   const text =
-    document.createElement("span");
+    command.trim();
+
+  const lower =
+    text.toLowerCase();
 
 
-  text.textContent =
-    " " + message;
+  // ----------------------------------------
+  // REMEMBER NAME
+  // ----------------------------------------
 
-
-  box.appendChild(title);
-
-  box.appendChild(text);
-
-
-  chat.appendChild(box);
-
-
-  chat.scrollTop =
-    chat.scrollHeight;
-
-
-  saveChat();
-
-}
-
-
-// ==========================================
-// SAVE CHAT
-// ==========================================
-
-function saveChat() {
-
-  if (!chat) return;
-
-
-  localStorage.setItem(
-    CHAT_STORAGE_KEY,
-    chat.innerHTML
-  );
-
-}
-
-
-// ==========================================
-// LOAD CHAT
-// ==========================================
-
-function loadChat() {
-
-  const saved =
-    localStorage.getItem(
-      CHAT_STORAGE_KEY
+  const nameMatch =
+    text.match(
+      /remember\s+(?:my\s+)?name\s+is\s+(.+)/i
     );
 
 
+  if (nameMatch) {
+
+    const name =
+      nameMatch[1]
+        .trim()
+        .replace(/[.!?]+$/, "");
+
+
+    MEMORY.name =
+      name;
+
+
+    saveMemory();
+
+
+    return (
+      `I will remember that, Boss. Your name is ${name}.`
+    );
+  }
+
+
+  // ----------------------------------------
+  // WHAT IS MY NAME
+  // ----------------------------------------
+
   if (
-    saved &&
-    chat
+    lower === "what is my name" ||
+    lower === "what's my name" ||
+    lower === "whats my name" ||
+    lower === "tell me my name" ||
+    lower === "do you remember my name"
   ) {
 
-    chat.innerHTML =
-      saved;
+    if (MEMORY.name) {
+
+      return (
+        `Your name is ${MEMORY.name}, Boss.`
+      );
+    }
 
 
-    chat.scrollTop =
-      chat.scrollHeight;
-
+    return (
+      "You haven't told me your name yet, Boss."
+    );
   }
+
+
+  // ----------------------------------------
+  // WHO AM I
+  // ----------------------------------------
+
+  if (
+    lower === "who am i" ||
+    lower === "who am i?"
+  ) {
+
+    if (MEMORY.name) {
+
+      return (
+        `You are ${MEMORY.name}, Boss.`
+      );
+    }
+
+
+    return (
+      "I don't know your name yet, Boss."
+    );
+  }
+
+
+  return null;
 
 }
 
@@ -371,11 +314,13 @@ function loadChat() {
 // GEMINI API
 // ==========================================
 
-async function callGemini(userPrompt) {
+async function callGemini(
+  userMessage
+) {
 
-  // ========================================
+  // ----------------------------------------
   // API KEY
-  // ========================================
+  // ----------------------------------------
 
   if (!API_KEY) {
 
@@ -390,7 +335,6 @@ async function callGemini(userPrompt) {
       return (
         "Gemini API key is required, Boss."
       );
-
     }
 
 
@@ -402,43 +346,28 @@ async function callGemini(userPrompt) {
       "jarvis_key",
       API_KEY
     );
+  }
+
+
+  // ----------------------------------------
+  // MEMORY CONTEXT
+  // ----------------------------------------
+
+  let memoryText =
+    "No permanent user information saved.";
+
+
+  if (MEMORY.name) {
+
+    memoryText =
+      `The user's name is ${MEMORY.name}.`;
 
   }
 
 
-  // ========================================
-  // MEMORY CONTEXT
-  // ========================================
-
-  const memoryContext =
-    getMemoryContext();
-
-
-  // ========================================
-  // JARVIS SYSTEM INSTRUCTION
-  // ========================================
-
-  const systemText = `
-You are J.A.R.V.I.S, the user's personal AI assistant.
-
-Always address the user as Boss.
-
-Be concise, friendly and useful.
-
-PERMANENT USER MEMORY:
-${memoryContext}
-
-If the user's name is present in permanent memory,
-you know the user's name and may use it when appropriate.
-
-Do not claim that you forgot information that is present
-in permanent memory.
-`;
-
-
-  // ========================================
-  // GEMINI URL
-  // ========================================
+  // ----------------------------------------
+  // API URL
+  // ----------------------------------------
 
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
@@ -464,7 +393,6 @@ in permanent memory.
 
           },
 
-
           body:
             JSON.stringify({
 
@@ -474,13 +402,23 @@ in permanent memory.
 
                   {
                     text:
-                      systemText
+                      `
+You are J.A.R.V.I.S, a personal AI assistant.
+
+Always address the user as Boss.
+
+Be concise, friendly and useful.
+
+Permanent memory:
+${memoryText}
+
+Use permanent memory when relevant.
+`
                   }
 
                 ]
 
               },
-
 
               contents: [
 
@@ -493,7 +431,7 @@ in permanent memory.
 
                     {
                       text:
-                        userPrompt
+                        userMessage
                     }
 
                   ]
@@ -508,9 +446,9 @@ in permanent memory.
       );
 
 
-    // ======================================
-    // ERROR HANDLING
-    // ======================================
+    // --------------------------------------
+    // ERROR
+    // --------------------------------------
 
     if (!response.ok) {
 
@@ -519,12 +457,11 @@ in permanent memory.
 
 
       console.error(
-        "Gemini error:",
+        "Gemini API error:",
         error
       );
 
 
-      // Invalid API key
       if (
         response.status === 401 ||
         response.status === 403
@@ -537,15 +474,12 @@ in permanent memory.
         API_KEY =
           "";
 
-
         return (
           "Your Gemini API key is invalid, Boss."
         );
-
       }
 
 
-      // Quota
       if (
         response.status === 429
       ) {
@@ -553,20 +487,18 @@ in permanent memory.
         return (
           "Gemini quota is currently unavailable, Boss."
         );
-
       }
 
 
       return (
         "Gemini service error, Boss."
       );
-
     }
 
 
-    // ======================================
-    // RESPONSE
-    // ======================================
+    // --------------------------------------
+    // READ RESPONSE
+    // --------------------------------------
 
     const data =
       await response.json();
@@ -588,7 +520,6 @@ in permanent memory.
       return (
         "I did not receive a response from Gemini, Boss."
       );
-
     }
 
 
@@ -606,7 +537,6 @@ in permanent memory.
     return (
       "I could not connect to Gemini, Boss."
     );
-
   }
 
 }
@@ -632,14 +562,10 @@ async function executeCommand() {
     );
 
     return;
-
   }
 
 
-  // ========================================
-  // SHOW USER COMMAND
-  // ========================================
-
+  // Show command
   addMessage(
     "YOU",
     command
@@ -650,114 +576,142 @@ async function executeCommand() {
     "";
 
 
-  try {
+  // ----------------------------------------
+  // MEMORY FIRST
+  // ----------------------------------------
 
-    // ======================================
-    // 🧠 PERMANENT MEMORY FIRST
-    // ======================================
-
-    const memoryResult =
-      processMemoryCommand(
-        command
-      );
+  const memoryReply =
+    checkMemory(command);
 
 
-    if (memoryResult) {
-
-      addMessage(
-        "J.A.R.V.I.S",
-        memoryResult
-      );
-
-
-      speak(
-        memoryResult
-      );
-
-
-      return;
-
-    }
-
-
-    // ======================================
-    // 🤖 AI AGENT
-    // ======================================
-
-    const agentResult =
-      await runAgent(
-        command
-      );
-
-
-    if (agentResult) {
-
-      addMessage(
-        "J.A.R.V.I.S",
-        agentResult
-      );
-
-
-      speak(
-        agentResult
-      );
-
-
-      return;
-
-    }
-
-
-    // ======================================
-    // 🧠 GEMINI
-    // ======================================
-
-    const reply =
-      await callGemini(
-        command
-      );
-
+  if (memoryReply) {
 
     addMessage(
       "J.A.R.V.I.S",
-      reply
+      memoryReply
     );
 
 
     speak(
-      reply
+      memoryReply
     );
 
 
-  } catch (error) {
+    return;
+  }
 
-    console.error(
-      "Command error:",
-      error
+
+  // ----------------------------------------
+  // GEMINI
+  // ----------------------------------------
+
+  addMessage(
+    "J.A.R.V.I.S",
+    "Processing..."
+  );
+
+
+  const reply =
+    await callGemini(
+      command
     );
 
 
-    const message =
-      "I encountered a system error, Boss.";
-
-
-    addMessage(
-      "J.A.R.V.I.S",
-      message
+  // Replace Processing
+  const messages =
+    chat.querySelectorAll(
+      ".message"
     );
 
 
-    speak(
-      message
+  const lastMessage =
+    messages[messages.length - 1];
+
+
+  if (lastMessage) {
+
+    lastMessage.innerHTML = "";
+
+    const title =
+      document.createElement("strong");
+
+    title.textContent =
+      "J.A.R.V.I.S:";
+
+
+    const text =
+      document.createElement("span");
+
+    text.textContent =
+      " " + reply;
+
+
+    lastMessage.appendChild(
+      title
     );
+
+    lastMessage.appendChild(
+      text
+    );
+
+    saveChat();
 
   }
+
+
+  speak(
+    reply
+  );
 
 }
 
 
 // ==========================================
-// VOICE RECOGNITION
+// ENTER KEY
+// ==========================================
+
+if (input) {
+
+  input.addEventListener(
+    "keydown",
+    function(event) {
+
+      if (
+        event.key === "Enter"
+      ) {
+
+        event.preventDefault();
+
+        executeCommand();
+
+      }
+
+    }
+  );
+
+}
+
+
+// ==========================================
+// EXECUTE BUTTON
+// ==========================================
+
+if (sendBtn) {
+
+  sendBtn.addEventListener(
+    "click",
+    function() {
+
+      executeCommand();
+
+    }
+  );
+
+}
+
+
+// ==========================================
+// VOICE INPUT
 // ==========================================
 
 let recognition =
@@ -778,7 +732,6 @@ function startListening() {
     );
 
     return;
-
   }
 
 
@@ -799,7 +752,7 @@ function startListening() {
 
 
   recognition.onstart =
-    () => {
+    function() {
 
       if (micBtn) {
 
@@ -812,7 +765,7 @@ function startListening() {
 
 
   recognition.onresult =
-    event => {
+    function(event) {
 
       const transcript =
         event.results[0][0]
@@ -833,7 +786,7 @@ function startListening() {
 
 
   recognition.onerror =
-    event => {
+    function(event) {
 
       console.error(
         "Voice error:",
@@ -844,7 +797,7 @@ function startListening() {
 
 
   recognition.onend =
-    () => {
+    function() {
 
       if (micBtn) {
 
@@ -862,7 +815,25 @@ function startListening() {
 
 
 // ==========================================
-// IMAGE / CAMERA BUTTON
+// MICROPHONE BUTTON
+// ==========================================
+
+if (micBtn) {
+
+  micBtn.addEventListener(
+    "click",
+    function() {
+
+      startListening();
+
+    }
+  );
+
+}
+
+
+// ==========================================
+// CAMERA BUTTON
 // ==========================================
 
 function openCamera() {
@@ -870,7 +841,6 @@ function openCamera() {
   if (!imageInput) {
 
     return;
-
   }
 
 
@@ -879,21 +849,35 @@ function openCamera() {
 }
 
 
+if (camBtn) {
+
+  camBtn.addEventListener(
+    "click",
+    function() {
+
+      openCamera();
+
+    }
+  );
+
+}
+
+
+// ==========================================
+// IMAGE SELECTED
+// ==========================================
+
 if (imageInput) {
 
   imageInput.addEventListener(
     "change",
-    event => {
+    function(event) {
 
       const file =
         event.target.files[0];
 
 
-      if (!file) {
-
-        return;
-
-      }
+      if (!file) return;
 
 
       addMessage(
@@ -918,74 +902,6 @@ if (imageInput) {
 
 
 // ==========================================
-// EXECUTE BUTTON
-// ==========================================
-
-if (sendBtn) {
-
-  sendBtn.addEventListener(
-    "click",
-    executeCommand
-  );
-
-}
-
-
-// ==========================================
-// ENTER KEY
-// ==========================================
-
-if (input) {
-
-  input.addEventListener(
-    "keydown",
-    event => {
-
-      if (
-        event.key === "Enter"
-      ) {
-
-        event.preventDefault();
-
-        executeCommand();
-
-      }
-
-    }
-  );
-
-}
-
-
-// ==========================================
-// MICROPHONE
-// ==========================================
-
-if (micBtn) {
-
-  micBtn.addEventListener(
-    "click",
-    startListening
-  );
-
-}
-
-
-// ==========================================
-// CAMERA
-// ==========================================
-
-if (camBtn) {
-
-  camBtn.addEventListener(
-    "click",
-    openCamera
-  );
-
-}
-
-
-// ==========================================
 // CLEAR MEMORY
 // ==========================================
 
@@ -993,28 +909,19 @@ if (clearBtn) {
 
   clearBtn.addEventListener(
     "click",
-    () => {
+    function() {
 
-      // Clear permanent memory
       localStorage.removeItem(
         "jarvis_memory"
       );
 
 
-      // Clear old memory key if present
       localStorage.removeItem(
-        "jarvis_permanent_memory"
+        "jarvis_chat"
       );
 
 
-      // Clear chat history
-      localStorage.removeItem(
-        CHAT_STORAGE_KEY
-      );
-
-
-      // Reset memory object
-      JARVIS_MEMORY =
+      MEMORY =
         {};
 
 
@@ -1037,29 +944,10 @@ if (clearBtn) {
 
 
 // ==========================================
-// LOAD SAVED CHAT
+// LOAD CHAT
 // ==========================================
 
 loadChat();
-
-
-// ==========================================
-// VOICE LOAD
-// ==========================================
-
-if (
-  "speechSynthesis" in window
-) {
-
-  window.speechSynthesis.onvoiceschanged =
-    () => {
-
-      window.speechSynthesis
-        .getVoices();
-
-    };
-
-}
 
 
 // ==========================================
@@ -1067,13 +955,25 @@ if (
 // ==========================================
 
 console.log(
-  "✅ J.A.R.V.I.S SYSTEM READY"
+  "================================"
 );
 
 console.log(
-  "🤖 AI AGENT ONLINE"
+  "J.A.R.V.I.S READY"
 );
 
 console.log(
-  "🧠 PERMANENT MEMORY ONLINE"
+  "Memory: ONLINE"
+);
+
+console.log(
+  "Voice: READY"
+);
+
+console.log(
+  "Gemini: READY"
+);
+
+console.log(
+  "================================"
 );
