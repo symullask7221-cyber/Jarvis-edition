@@ -1,445 +1,251 @@
-
 // ==========================================
-// 🤖 J.A.R.V.I.S AI AGENT
-// AGENT ROUTER + TOOLS
+// J.A.R.V.I.S AI AGENT
 // ==========================================
 
-console.log("🤖 J.A.R.V.I.S AGENT LOADING...");
+console.log("JARVIS AGENT LOADING...");
 
+window.runAgent = async function(command) {
 
-// ==========================================
-// MAIN AGENT
-// ==========================================
+  const text = String(command || "")
+    .toLowerCase()
+    .trim();
 
-async function runAgent(command) {
-
-  const text = command.toLowerCase().trim();
-
-  console.log("🤖 AGENT RECEIVED:", command);
-
-
-  // ========================================
   // TIME
-  // ========================================
-
   if (
     text.includes("time") ||
     text.includes("సమయం") ||
     text.includes("టైమ్")
   ) {
-
-    return agentTools.getTime();
-  }
-
-
-  // ========================================
-  // WEATHER
-  // ========================================
-
-  if (
-    text.includes("weather") ||
-    text.includes("వాతావరణం")
-  ) {
-
-    return await agentTools.getWeather();
-  }
-
-
-  // ========================================
-  // TIMER
-  // ========================================
-
-  const timerMatch = text.match(
-    /(\d+)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/i
-  );
-
-
-  if (
-    timerMatch &&
-    (
-      text.includes("timer") ||
-      text.includes("టైమర్")
-    )
-  ) {
-
-    const amount =
-      parseInt(timerMatch[1]);
-
-    const unit =
-      timerMatch[2];
-
-    return agentTools.setTimer(
-      amount,
-      unit
-    );
-  }
-
-
-  // ========================================
-  // YOUTUBE
-  // ========================================
-
-  if (
-    text.includes("youtube") ||
-    text.startsWith("play ")
-  ) {
-
-    const query =
-      command
-        .replace(/youtube/ig, "")
-        .replace(/search/ig, "")
-        .replace(/play/ig, "")
-        .trim();
-
-
-    return agentTools.youtubeSearch(query);
-  }
-
-
-  // ========================================
-  // TRANSLATE
-  // ========================================
-
-  if (text.startsWith("translate")) {
-
-    const query =
-      command
-        .replace(/translate/i, "")
-        .trim();
-
-
-    return agentTools.translate(query);
-  }
-
-
-  // ========================================
-  // REMEMBER
-  // ========================================
-
-  if (text.startsWith("remember ")) {
-
-    const value =
-      command
-        .replace(/remember/i, "")
-        .trim();
-
-
-    return agentTools.remember(value);
-  }
-
-
-  // ========================================
-  // MEMORY
-  // ========================================
-
-  if (
-    text.includes("what do you remember") ||
-    text.includes("my memory")
-  ) {
-
-    return agentTools.getMemory();
-  }
-
-
-  // ========================================
-  // UNKNOWN
-  // ========================================
-
-  return null;
-}
-
-
-// ==========================================
-// 🛠️ TOOLS
-// ==========================================
-
-const agentTools = {
-
-
-  // ========================================
-  // TIME
-  // ========================================
-
-  getTime() {
-
     return (
       "The time is " +
       new Date().toLocaleTimeString() +
       ", Boss."
     );
-  },
+  }
 
 
-  // ========================================
   // WEATHER
-  // ========================================
-
-  async getWeather() {
-
-    return new Promise(resolve => {
-
-      if (!navigator.geolocation) {
-
-        resolve(
-          "Location is not supported on this device, Boss."
-        );
-
-        return;
-      }
+  if (
+    text.includes("weather") ||
+    text.includes("వాతావరణం")
+  ) {
+    return await getWeather();
+  }
 
 
-      navigator.geolocation.getCurrentPosition(
-
-        async position => {
-
-          try {
-
-            const latitude =
-              position.coords.latitude;
-
-            const longitude =
-              position.coords.longitude;
-
-
-            const url =
-              `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m`;
-
-
-            const response =
-              await fetch(url);
-
-
-            if (!response.ok) {
-              throw new Error(
-                "Weather request failed"
-              );
-            }
-
-
-            const data =
-              await response.json();
-
-
-            const temperature =
-              data.current.temperature_2m;
-
-
-            resolve(
-              `The current temperature is ${temperature} degrees Celsius, Boss.`
-            );
-
-
-          } catch (error) {
-
-            console.error(
-              "Weather error:",
-              error
-            );
-
-
-            resolve(
-              "Weather service error, Boss."
-            );
-          }
-
-        },
-
-
-        () => {
-
-          resolve(
-            "Please allow location permission for weather, Boss."
-          );
-
-        }
-
-      );
-
-    });
-  },
-
-
-  // ========================================
   // TIMER
-  // ========================================
+  const timerMatch = text.match(
+    /(\d+)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/i
+  );
 
-  setTimer(amount, unit) {
+  if (
+    timerMatch &&
+    (
+      text.includes("timer") ||
+      text.includes("టైమర్") ||
+      text.includes("set timer")
+    )
+  ) {
+
+    const amount = parseInt(timerMatch[1]);
+    const unit = timerMatch[2];
 
     let multiplier = 60000;
 
-
-    if (
-      /second|seconds|sec|secs/i.test(unit)
-    ) {
+    if (/second|sec/i.test(unit)) {
       multiplier = 1000;
     }
 
-
-    if (
-      /hour|hours|hr|hrs/i.test(unit)
-    ) {
+    if (/hour|hr/i.test(unit)) {
       multiplier = 3600000;
     }
 
-
-    const duration =
-      amount * multiplier;
-
-
     setTimeout(() => {
 
-      const message =
+      const msg =
         `Timer finished. ${amount} ${unit} completed, Boss.`;
 
-
-      if (typeof speak === "function") {
-        speak(message);
+      if (typeof window.speak === "function") {
+        window.speak(msg);
       }
 
-
-      if (typeof addMessage === "function") {
-        addMessage(
-          "J.A.R.V.I.S",
-          message
-        );
+      if (typeof window.addMessage === "function") {
+        window.addMessage("J.A.R.V.I.S", msg);
       }
 
-    }, duration);
+    }, amount * multiplier);
+
+    return `Timer set for ${amount} ${unit}, Boss.`;
+  }
 
 
-    return (
-      `Timer set for ${amount} ${unit}, Boss.`
-    );
-  },
-
-
-  // ========================================
   // YOUTUBE
-  // ========================================
+  if (
+    text.includes("youtube") ||
+    text.startsWith("play ")
+  ) {
 
-  youtubeSearch(query) {
+    const query = command
+      .replace(/youtube/ig, "")
+      .replace(/search/ig, "")
+      .replace(/play/ig, "")
+      .trim();
 
     if (!query) {
-
-      return (
-        "What should I search on YouTube, Boss?"
-      );
+      return "What should I search on YouTube, Boss?";
     }
 
-
-    const url =
-      "https://www.youtube.com/results?search_query=" +
-      encodeURIComponent(query);
-
-
     window.open(
-      url,
+      "https://www.youtube.com/results?search_query=" +
+      encodeURIComponent(query),
       "_blank"
     );
 
-
-    return (
-      `Searching YouTube for ${query}, Boss.`
-    );
-  },
+    return `Searching YouTube for ${query}, Boss.`;
+  }
 
 
-  // ========================================
   // TRANSLATE
-  // ========================================
+  if (text.startsWith("translate")) {
 
-  async translate(query) {
+    const query =
+      command.replace(/translate/i, "").trim();
 
     if (!query) {
-
-      return (
-        "What should I translate, Boss?"
-      );
+      return "What should I translate, Boss?";
     }
-
 
     try {
 
-      const url =
+      const response = await fetch(
         "https://api.mymemory.translated.net/get?q=" +
         encodeURIComponent(query) +
-        "&langpair=en|te";
+        "&langpair=en|te"
+      );
 
-
-      const response =
-        await fetch(url);
-
-
-      const data =
-        await response.json();
-
+      const data = await response.json();
 
       return (
         "In Telugu: " +
         data.responseData.translatedText
       );
 
-
     } catch (error) {
 
-      console.error(
-        "Translation error:",
-        error
-      );
-
-
-      return (
-        "Translation service error, Boss."
-      );
+      return "Translation service error, Boss.";
     }
-  },
+  }
 
 
-  // ========================================
   // REMEMBER
-  // ========================================
+  if (text.startsWith("remember ")) {
 
-  remember(value) {
+    const memory =
+      command.replace(/remember/i, "").trim();
 
     localStorage.setItem(
       "jarvis_memory",
-      value
-    );
-
-
-    return (
-      "I will remember that, Boss."
-    );
-  },
-
-
-  // ========================================
-  // GET MEMORY
-  // ========================================
-
-  getMemory() {
-
-    const memory =
-      localStorage.getItem(
-        "jarvis_memory"
-      );
-
-
-    if (!memory) {
-
-      return (
-        "I don't have any saved memory yet, Boss."
-      );
-    }
-
-
-    return (
-      "I remember: " +
       memory
     );
+
+    return "I will remember that, Boss.";
   }
 
+
+  // MEMORY
+  if (
+    text.includes("what do you remember") ||
+    text.includes("my memory")
+  ) {
+
+    const memory =
+      localStorage.getItem("jarvis_memory");
+
+    if (!memory) {
+      return "I don't have any saved memory yet, Boss.";
+    }
+
+    return "I remember: " + memory;
+  }
+
+
+  // NO TOOL
+  return null;
 };
 
 
-console.log("🤖 J.A.R.V.I.S AGENT ONLINE");
+// ==========================================
+// WEATHER FUNCTION
+// ==========================================
+
+async function getWeather() {
+
+  return new Promise(resolve => {
+
+    if (!navigator.geolocation) {
+
+      resolve(
+        "Location is not supported, Boss."
+      );
+
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+
+      async position => {
+
+        try {
+
+          const lat =
+            position.coords.latitude;
+
+          const lon =
+            position.coords.longitude;
+
+          const url =
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m`;
+
+          const response =
+            await fetch(url);
+
+          if (!response.ok) {
+            throw new Error("Weather failed");
+          }
+
+          const data =
+            await response.json();
+
+          const temperature =
+            data.current.temperature_2m;
+
+          resolve(
+            `The current temperature is ${temperature} degrees Celsius, Boss.`
+          );
+
+        } catch (error) {
+
+          console.error(error);
+
+          resolve(
+            "Weather service error, Boss."
+          );
+        }
+
+      },
+
+      () => {
+
+        resolve(
+          "Please allow location permission for weather, Boss."
+        );
+
+      }
+
+    );
+
+  });
+};
+
+
+console.log("JARVIS AGENT ONLINE");
