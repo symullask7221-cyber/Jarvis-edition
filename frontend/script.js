@@ -1,1129 +1,1006 @@
-document.addEventListener("DOMContentLoaded", () => {
+// ==========================================
+// J.A.R.V.I.S MOBILE EDITION
+// COMPLETE SCRIPT
+// ==========================================
 
-    // ==============================
-    // J.A.R.V.I.S CONFIGURATION
-    // ==============================
+console.log("J.A.R.V.I.S loading...");
 
-    const API_KEY_STORAGE = "jarvis_key";
 
-    const MODELS = [
-        "gemini-3.8-flash",
-        "gemini-3.7-flash",
-        "gemini-3.6-flash"
-    ];
+// ==========================================
+// SETTINGS
+// ==========================================
 
-    // ==============================
-    // DOM ELEMENTS
-    // ==============================
+// Gemini API key
+// First time you use AI, JARVIS will ask for it.
 
-    const chat = document.getElementById("chat");
-    const input = document.getElementById("msg");
-    const sendBtn = document.getElementById("send");
-    const micBtn = document.getElementById("mic-btn");
-    const camBtn = document.getElementById("cam-btn");
-    const clearBtn = document.getElementById("clear-btn");
-    const imgInput = document.getElementById("img-input");
+let API_KEY = localStorage.getItem("jarvis_key") || "";
 
-    // ==============================
-    // API KEY
-    // ==============================
+// Current Google Gemini model
+const MODEL = "gemini-3.6-flash";
 
-    let API_KEY = localStorage.getItem(API_KEY_STORAGE);
+
+// ==========================================
+// ELEMENTS
+// ==========================================
+
+const input = document.getElementById("msg");
+const chat = document.getElementById("chat");
+const sendBtn = document.getElementById("send");
+const micBtn = document.getElementById("mic-btn");
+const camBtn = document.getElementById("cam-btn");
+const clearBtn = document.getElementById("clear-btn");
+const imageInput = document.getElementById("img-input");
+
+
+// ==========================================
+// SPEAK
+// ==========================================
+
+function speak(text) {
+
+  if (!("speechSynthesis" in window)) {
+    console.log("Speech synthesis not supported");
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const speech =
+    new SpeechSynthesisUtterance(text);
+
+  speech.rate = 0.92;
+  speech.pitch = 0.75;
+  speech.volume = 1;
+
+  const voices =
+    window.speechSynthesis.getVoices();
+
+  // Try to find an English voice
+  const voice =
+    voices.find(v =>
+      /en-US|en-GB|English/i.test(v.lang)
+    );
+
+  if (voice) {
+    speech.voice = voice;
+  }
+
+  window.speechSynthesis.speak(speech);
+}
+
+
+// ==========================================
+// ADD MESSAGE
+// ==========================================
+
+function addMessage(sender, message) {
+
+  if (!chat) return;
+
+  const box =
+    document.createElement("div");
+
+  box.className = "message";
+
+  const title =
+    document.createElement("strong");
+
+  title.textContent =
+    sender + ":";
+
+  const text =
+    document.createElement("span");
+
+  text.textContent =
+    " " + message;
+
+  box.appendChild(title);
+  box.appendChild(text);
+
+  chat.appendChild(box);
+
+  chat.scrollTop =
+    chat.scrollHeight;
+
+  saveChat();
+}
+
+
+// ==========================================
+// SAVE CHAT
+// ==========================================
+
+function saveChat() {
+
+  if (!chat) return;
+
+  localStorage.setItem(
+    "jarvis_chat",
+    chat.innerHTML
+  );
+}
+
+
+// ==========================================
+// LOAD CHAT
+// ==========================================
+
+function loadChat() {
+
+  const saved =
+    localStorage.getItem("jarvis_chat");
+
+  if (saved && chat) {
+    chat.innerHTML = saved;
+    chat.scrollTop =
+      chat.scrollHeight;
+  }
+}
+
+
+// ==========================================
+// MEMORY
+// ==========================================
+
+function saveMemory(key, value) {
+
+  let memory =
+    JSON.parse(
+      localStorage.getItem("jarvis_memory") || "{}"
+    );
+
+  memory[key] = value;
+
+  localStorage.setItem(
+    "jarvis_memory",
+    JSON.stringify(memory)
+  );
+}
+
+
+function getMemory(key) {
+
+  let memory =
+    JSON.parse(
+      localStorage.getItem("jarvis_memory") || "{}"
+    );
+
+  return memory[key] || null;
+}
+
+
+// ==========================================
+// GEMINI AI
+// ==========================================
+
+async function callGemini(prompt) {
+
+  if (!API_KEY) {
+
+    API_KEY =
+      promptForApiKey();
 
     if (!API_KEY) {
-        API_KEY = prompt("Enter your Gemini API Key:");
-
-        if (API_KEY) {
-            localStorage.setItem(API_KEY_STORAGE, API_KEY.trim());
-            API_KEY = API_KEY.trim();
-        }
+      return "Gemini API key is required, Boss.";
     }
 
-    // ==============================
-    // PERMANENT MEMORY
-    // ==============================
+    localStorage.setItem(
+      "jarvis_key",
+      API_KEY
+    );
+  }
 
-    let PERMANENT_MEMORY =
-        JSON.parse(localStorage.getItem("jarvis_permanent_memory")) || {};
 
-    let CHAT_MEMORY =
-        JSON.parse(localStorage.getItem("jarvis_chat_memory")) || [];
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
-    function savePermanentMemory() {
-        localStorage.setItem(
-            "jarvis_permanent_memory",
-            JSON.stringify(PERMANENT_MEMORY)
-        );
-    }
 
-    function saveChatMemory() {
-        localStorage.setItem(
-            "jarvis_chat_memory",
-            JSON.stringify(CHAT_MEMORY)
-        );
-    }
+  const response =
+    await fetch(url, {
 
-    // ==============================
-    // CHAT DISPLAY
-    // ==============================
+      method: "POST",
 
-    function addMessage(sender, text) {
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": API_KEY
+      },
 
-        const message = document.createElement("div");
+      body: JSON.stringify({
 
-        message.className =
-            sender === "You"
-                ? "user-message"
-                : "jarvis-message";
-
-        message.innerText =
-            sender + ": " + text;
-
-        chat.appendChild(message);
-
-        chat.scrollTop = chat.scrollHeight;
-    }
-
-    // ==============================
-    // AUTOMATIC PERSONAL MEMORY
-    // ==============================
-
-    function detectPersonalMemory(text) {
-
-        let match;
-
-        // ------------------------------
-        // MY NAME IS ...
-        // ------------------------------
-
-        match = text.match(
-            /^my\s+name\s+is\s+(.+)$/i
-        );
-
-        if (match) {
-
-            const name = match[1].trim();
-
-            if (name) {
-
-                PERMANENT_MEMORY.name = name;
-
-                savePermanentMemory();
-
-                return `Okay. I'll remember that your name is ${name}.`;
+        systemInstruction: {
+          parts: [
+            {
+              text:
+                "You are J.A.R.V.I.S, a helpful personal AI assistant. Address the user as Boss. Be concise, polite and useful."
             }
-        }
+          ]
+        },
 
-        // ------------------------------
-        // CALL ME ...
-        // ------------------------------
+        contents: [
 
-        match = text.match(
-            /^call\s+me\s+(.+)$/i
-        );
-
-        if (match) {
-
-            const name = match[1].trim();
-
-            if (name) {
-
-                PERMANENT_MEMORY.name = name;
-
-                savePermanentMemory();
-
-                return `Got it. I'll call you ${name}.`;
-            }
-        }
-
-        // ------------------------------
-        // I LIVE IN ...
-        // ------------------------------
-
-        match = text.match(
-            /^i\s+live\s+in\s+(.+)$/i
-        );
-
-        if (match) {
-
-            const location = match[1].trim();
-
-            PERMANENT_MEMORY.location = location;
-
-            savePermanentMemory();
-
-            return `Okay. I'll remember that you live in ${location}.`;
-        }
-
-        // ------------------------------
-        // MY FAVORITE COLOR IS ...
-        // ------------------------------
-
-        match = text.match(
-            /^my\s+favorite\s+color\s+is\s+(.+)$/i
-        );
-
-        if (match) {
-
-            const value = match[1].trim();
-
-            PERMANENT_MEMORY["favorite color"] = value;
-
-            savePermanentMemory();
-
-            return `Okay. I'll remember that your favorite color is ${value}.`;
-        }
-
-        // ------------------------------
-        // MY FAVORITE FOOD IS ...
-        // ------------------------------
-
-        match = text.match(
-            /^my\s+favorite\s+food\s+is\s+(.+)$/i
-        );
-
-        if (match) {
-
-            const value = match[1].trim();
-
-            PERMANENT_MEMORY["favorite food"] = value;
-
-            savePermanentMemory();
-
-            return `Okay. I'll remember that your favorite food is ${value}.`;
-        }
-
-        // ------------------------------
-        // MY BIRTHDAY IS ...
-        // ------------------------------
-
-        match = text.match(
-            /^my\s+birthday\s+is\s+(.+)$/i
-        );
-
-        if (match) {
-
-            const value = match[1].trim();
-
-            PERMANENT_MEMORY.birthday = value;
-
-            savePermanentMemory();
-
-            return `Okay. I'll remember your birthday is ${value}.`;
-        }
-
-        // ------------------------------
-        // MY SCHOOL IS ...
-        // ------------------------------
-
-        match = text.match(
-            /^my\s+school\s+is\s+(.+)$/i
-        );
-
-        if (match) {
-
-            const value = match[1].trim();
-
-            PERMANENT_MEMORY.school = value;
-
-            savePermanentMemory();
-
-            return `Okay. I'll remember that your school is ${value}.`;
-        }
-
-        // ------------------------------
-        // GENERIC: MY X IS Y
-        // ------------------------------
-
-        match = text.match(
-            /^my\s+(.+?)\s+is\s+(.+)$/i
-        );
-
-        if (match) {
-
-            const key = match[1].trim().toLowerCase();
-            const value = match[2].trim();
-
-            if (
-                key &&
-                value &&
-                key !== "name"
-            ) {
-
-                PERMANENT_MEMORY[key] = value;
-
-                savePermanentMemory();
-
-                return `Okay. I'll remember that your ${key} is ${value}.`;
-            }
-        }
-
-        return null;
-    }
-
-    // ==============================
-    // MEMORY COMMANDS
-    // ==============================
-
-    function processMemoryCommand(text) {
-
-        const lower = text.toLowerCase().trim();
-
-        // ------------------------------
-        // AUTOMATIC PERSONAL MEMORY
-        // ------------------------------
-
-        const personalMemory =
-            detectPersonalMemory(text);
-
-        if (personalMemory) {
-            return personalMemory;
-        }
-
-        // ------------------------------
-        // REMEMBER THAT ...
-        // ------------------------------
-
-        let rememberMatch =
-            text.match(
-                /^(?:remember|remember that|please remember)\s+(.+)$/i
-            );
-
-        if (rememberMatch) {
-
-            const information =
-                rememberMatch[1].trim();
-
-            const nameMatch =
-                information.match(
-                    /^name\s+is\s+(.+)$/i
-                );
-
-            if (nameMatch) {
-
-                const name =
-                    nameMatch[1].trim();
-
-                PERMANENT_MEMORY.name = name;
-
-                savePermanentMemory();
-
-                return `Okay. I'll remember that your name is ${name}.`;
-            }
-
-            const keyValueMatch =
-                information.match(
-                    /^(.+?)\s+is\s+(.+)$/i
-                );
-
-            if (keyValueMatch) {
-
-                const key =
-                    keyValueMatch[1]
-                        .trim()
-                        .toLowerCase();
-
-                const value =
-                    keyValueMatch[2].trim();
-
-                PERMANENT_MEMORY[key] = value;
-
-                savePermanentMemory();
-
-                return `Okay. I'll remember that your ${key} is ${value}.`;
-            }
-
-            const memoryId =
-                "memory_" + Date.now();
-
-            PERMANENT_MEMORY[memoryId] =
-                information;
-
-            savePermanentMemory();
-
-            return `Okay. I'll remember that: ${information}`;
-        }
-
-        // ------------------------------
-        // WHAT IS MY NAME?
-        // ------------------------------
-
-        if (
-            lower === "what is my name" ||
-            lower === "what is my name?" ||
-            lower === "what's my name" ||
-            lower === "what's my name?" ||
-            lower.includes("do you know my name")
-        ) {
-
-            if (PERMANENT_MEMORY.name) {
-
-                return `Your name is ${PERMANENT_MEMORY.name}.`;
-            }
-
-            return "I don't know your name yet. Tell me: My name is ...";
-        }
-
-        // ------------------------------
-        // WHAT DO YOU REMEMBER?
-        // ------------------------------
-
-        if (
-            lower === "what do you remember" ||
-            lower === "what do you remember?" ||
-            lower.includes("what did you remember")
-        ) {
-
-            const keys =
-                Object.keys(PERMANENT_MEMORY);
-
-            if (keys.length === 0) {
-
-                return "I don't have any saved permanent memories yet.";
-            }
-
-            return keys
-                .map(
-                    key =>
-                        "• " +
-                        key +
-                        ": " +
-                        PERMANENT_MEMORY[key]
-                )
-                .join("\n");
-        }
-
-        // ------------------------------
-        // FORGET EVERYTHING
-        // ------------------------------
-
-        if (
-            lower === "forget everything" ||
-            lower === "forget all memory" ||
-            lower === "forget all memories"
-        ) {
-
-            PERMANENT_MEMORY = {};
-            CHAT_MEMORY = [];
-
-            savePermanentMemory();
-            saveChatMemory();
-
-            return "All saved memories have been forgotten.";
-        }
-
-        // ------------------------------
-        // FORGET MY NAME
-        // ------------------------------
-
-        if (
-            lower === "forget my name" ||
-            lower === "forget my name."
-        ) {
-
-            if (PERMANENT_MEMORY.name) {
-
-                delete PERMANENT_MEMORY.name;
-
-                savePermanentMemory();
-
-                return "Okay. I forgot your name.";
-            }
-
-            return "I don't have your name saved.";
-        }
-
-        // ------------------------------
-        // FORGET X
-        // ------------------------------
-
-        const forgetMatch =
-            text.match(
-                /^forget\s+(?:my\s+)?(.+)$/i
-            );
-
-        if (forgetMatch) {
-
-            const key =
-                forgetMatch[1]
-                    .trim()
-                    .toLowerCase();
-
-            if (
-                Object.prototype.hasOwnProperty.call(
-                    PERMANENT_MEMORY,
-                    key
-                )
-            ) {
-
-                delete PERMANENT_MEMORY[key];
-
-                savePermanentMemory();
-
-                return `Okay. I forgot your ${key}.`;
-            }
-
-            return `I couldn't find a saved memory for ${key}.`;
-        }
-
-        return null;
-    }
-
-    // ==============================
-    // MEMORY CONTEXT FOR GEMINI
-    // ==============================
-
-    function getMemoryContext() {
-
-        const keys =
-            Object.keys(PERMANENT_MEMORY);
-
-        if (keys.length === 0) {
-
-            return "No permanent personal information is currently saved.";
-        }
-
-        return keys
-            .map(
-                key =>
-                    `${key}: ${PERMANENT_MEMORY[key]}`
-            )
-            .join("\n");
-    }
-
-    // ==============================
-    // GEMINI API
-    // ==============================
-
-    async function callGemini(userText) {
-
-        if (!API_KEY) {
-
-            return "Gemini API key is missing.";
-        }
-
-        const memoryContext =
-            getMemoryContext();
-
-        const recentChat =
-            CHAT_MEMORY
-                .slice(-10)
-                .map(
-                    item =>
-                        `${item.role}: ${item.text}`
-                )
-                .join("\n");
-
-        const systemPrompt = `
-You are J.A.R.V.I.S, a helpful personal AI assistant.
-
-Address the user naturally and respectfully.
-
-IMPORTANT:
-Use the saved personal memory below whenever relevant.
-
-SAVED PERSONAL MEMORY:
-${memoryContext}
-
-RECENT CONVERSATION:
-${recentChat}
-
-Do not claim that you remember something unless it is present in the saved memory or conversation.
-
-Keep responses clear and useful.
-`;
-
-        for (const model of MODELS) {
-
-            try {
-
-                const url =
-                    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
-
-                const response =
-                    await fetch(url, {
-
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-
-                            contents: [
-
-                                {
-                                    role: "user",
-
-                                    parts: [
-
-                                        {
-                                            text:
-                                                systemPrompt +
-                                                "\n\nUSER:\n" +
-                                                userText
-                                        }
-
-                                    ]
-                                }
-
-                            ],
-
-                            generationConfig: {
-
-                                temperature: 0.7,
-
-                                maxOutputTokens: 1000
-                            }
-
-                        })
-                    });
-
-                const data =
-                    await response.json();
-
-                if (
-                    response.ok &&
-                    data.candidates &&
-                    data.candidates.length
-                ) {
-
-                    const reply =
-                        data.candidates[0]
-                            .content
-                            .parts
-                            .map(part => part.text || "")
-                            .join("");
-
-                    return reply.trim();
-                }
-
-            } catch (error) {
-
-                console.error(
-                    "Gemini error:",
-                    error
-                );
-            }
-        }
-
-        return "I'm having trouble connecting to the Gemini AI service right now.";
-    }
-
-    // ==============================
-    // TEXT TO SPEECH
-    // ==============================
-
-    function speak(text) {
-
-        if (
-            !("speechSynthesis" in window)
-        ) {
-            return;
-        }
-
-        speechSynthesis.cancel();
-
-        const cleanText =
-            text
-                .replace(/[*#•]/g, "")
-                .replace(/\n+/g, " ");
-
-        const utterance =
-            new SpeechSynthesisUtterance(
-                cleanText
-            );
-
-        utterance.lang = "en-IN";
-        utterance.rate = 0.95;
-        utterance.pitch = 0.75;
-        utterance.volume = 1;
-
-        const voices =
-            speechSynthesis.getVoices();
-
-        const preferredVoice =
-            voices.find(
-                voice =>
-                    /male/i.test(voice.name) &&
-                    /en-IN|en-US|en-GB/i.test(
-                        voice.lang
-                    )
-            );
-
-        if (preferredVoice) {
-
-            utterance.voice =
-                preferredVoice;
-        }
-
-        speechSynthesis.speak(
-            utterance
-        );
-    }
-
-    // ==============================
-    // EXECUTE COMMAND
-    // ==============================
-
-    async function executeCommand() {
-
-        const text =
-            input.value.trim();
-
-        if (!text) {
-            return;
-        }
-
-        addMessage(
-            "You",
-            text
-        );
-
-        input.value = "";
-
-        // ------------------------------
-        // MEMORY COMMAND
-        // ------------------------------
-
-        const memoryReply =
-            processMemoryCommand(text);
-
-        if (memoryReply) {
-
-            addMessage(
-                "J.A.R.V.I.S",
-                memoryReply
-            );
-
-            speak(memoryReply);
-
-            CHAT_MEMORY.push({
-                role: "user",
-                text: text
-            });
-
-            CHAT_MEMORY.push({
-                role: "assistant",
-                text: memoryReply
-            });
-
-            saveChatMemory();
-
-            return;
-        }
-
-        // ------------------------------
-        // SAVE CHAT
-        // ------------------------------
-
-        CHAT_MEMORY.push({
+          {
             role: "user",
-            text: text
-        });
 
-        saveChatMemory();
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
 
-        // ------------------------------
-        // GEMINI
-        // ------------------------------
+        ]
 
-        addMessage(
-            "J.A.R.V.I.S",
-            "Processing..."
+      })
+
+    });
+
+
+  if (!response.ok) {
+
+    const errorText =
+      await response.text();
+
+    console.error(
+      "Gemini error:",
+      errorText
+    );
+
+    if (response.status === 400) {
+      return "The Gemini API request is invalid, Boss.";
+    }
+
+    if (response.status === 401 ||
+        response.status === 403) {
+
+      localStorage.removeItem(
+        "jarvis_key"
+      );
+
+      API_KEY = "";
+
+      return "The Gemini API key is invalid, Boss.";
+    }
+
+    if (response.status === 429) {
+      return "Gemini quota is currently unavailable, Boss. Please try again later.";
+    }
+
+    return "Gemini service error, Boss.";
+  }
+
+
+  const data =
+    await response.json();
+
+
+  const reply =
+    data?.candidates?.[0]?.content?.parts
+      ?.map(part => part.text || "")
+      .join("")
+      .trim();
+
+
+  if (!reply) {
+    return "I did not receive a response from Gemini, Boss.";
+  }
+
+
+  return reply;
+}
+
+
+// ==========================================
+// API KEY PROMPT
+// ==========================================
+
+function promptForApiKey() {
+
+  const key =
+    prompt("Enter your Gemini API Key:");
+
+  if (!key) {
+    return "";
+  }
+
+  return key.trim();
+}
+
+
+// ==========================================
+// TOOLS
+// ==========================================
+
+async function handleTools(text) {
+
+  const t =
+    text.toLowerCase().trim();
+
+
+  // ========================================
+  // TIME
+  // ========================================
+
+  if (
+    t.includes("time") ||
+    t.includes("సమయం") ||
+    t.includes("టైమ్")
+  ) {
+
+    return (
+      "The time is " +
+      new Date().toLocaleTimeString() +
+      ", Boss."
+    );
+  }
+
+
+  // ========================================
+  // WEATHER
+  // ========================================
+
+  if (
+    t.includes("weather") ||
+    t.includes("వాతావరణం")
+  ) {
+
+    return new Promise(resolve => {
+
+      if (!navigator.geolocation) {
+
+        resolve(
+          "Location is not supported, Boss."
         );
 
-        const lastMessage =
-            chat.lastElementChild;
+        return;
+      }
 
-        try {
 
-            const reply =
-                await callGemini(text);
+      navigator.geolocation.getCurrentPosition(
 
-            if (lastMessage) {
+        async position => {
 
-                lastMessage.innerText =
-                    "J.A.R.V.I.S: " +
-                    reply;
+          try {
+
+            const lat =
+              position.coords.latitude;
+
+            const lon =
+              position.coords.longitude;
+
+
+            const url =
+              `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m`;
+
+
+            const response =
+              await fetch(url);
+
+
+            if (!response.ok) {
+              throw new Error(
+                "Weather request failed"
+              );
             }
 
-            CHAT_MEMORY.push({
-                role: "assistant",
-                text: reply
-            });
 
-            saveChatMemory();
+            const data =
+              await response.json();
 
-            speak(reply);
 
-        } catch (error) {
+            const temperature =
+              data.current.temperature_2m;
+
+
+            resolve(
+              `The current temperature is ${temperature} degrees Celsius, Boss.`
+            );
+
+          } catch (error) {
 
             console.error(error);
 
-            if (lastMessage) {
+            resolve(
+              "Weather service error, Boss."
+            );
+          }
 
-                lastMessage.innerText =
-                    "J.A.R.V.I.S: Unable to process the command.";
-            }
+        },
+
+        () => {
+
+          resolve(
+            "Please allow location permission for weather, Boss."
+          );
+
         }
-    }
 
-    // ==============================
-    // EXECUTE BUTTON
-    // ==============================
+      );
 
-    sendBtn.addEventListener(
-        "click",
-        executeCommand
+    });
+  }
+
+
+  // ========================================
+  // TIMER
+  // ========================================
+
+  const timerMatch =
+    t.match(
+      /(\d+)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/i
     );
 
-    // ==============================
-    // ENTER KEY
-    // ==============================
 
-    input.addEventListener(
-        "keydown",
-        event => {
+  if (
+    (t.includes("timer") ||
+     t.includes("టైమర్")) &&
+    timerMatch
+  ) {
 
-            if (event.key === "Enter") {
+    const amount =
+      parseInt(timerMatch[1]);
 
-                event.preventDefault();
 
-                executeCommand();
-            }
-        }
-    );
+    const unit =
+      timerMatch[2].toLowerCase();
 
-    // ==============================
-    // MICROPHONE
-    // ==============================
 
-    let recognition = null;
+    let factor = 60000;
 
-    const SpeechRecognition =
-        window.SpeechRecognition ||
-        window.webkitSpeechRecognition;
 
-    if (SpeechRecognition) {
-
-        recognition =
-            new SpeechRecognition();
-
-        recognition.lang = "en-IN";
-
-        recognition.continuous = false;
-
-        recognition.interimResults = false;
-
-        recognition.onstart = () => {
-
-            micBtn.innerText = "🔴";
-        };
-
-        recognition.onend = () => {
-
-            micBtn.innerText = "🎙️";
-        };
-
-        recognition.onresult =
-            event => {
-
-                const transcript =
-                    event.results[0][0].transcript;
-
-                input.value =
-                    transcript;
-
-                executeCommand();
-            };
-
-        recognition.onerror =
-            event => {
-
-                console.error(
-                    "Speech recognition error:",
-                    event.error
-                );
-
-                micBtn.innerText = "🎙️";
-            };
-
-        micBtn.addEventListener(
-            "click",
-            () => {
-
-                try {
-
-                    recognition.start();
-
-                } catch (error) {
-
-                    console.log(error);
-                }
-            }
-        );
-
-    } else {
-
-        micBtn.addEventListener(
-            "click",
-            () => {
-
-                alert(
-                    "Voice input is not supported in this browser."
-                );
-            }
-        );
-    }
-
-    // ==============================
-    // CAMERA
-    // ==============================
-
-    if (camBtn && imgInput) {
-
-        camBtn.addEventListener(
-            "click",
-            () => {
-
-                imgInput.click();
-            }
-        );
-
-        imgInput.addEventListener(
-            "change",
-            async event => {
-
-                const file =
-                    event.target.files[0];
-
-                if (!file) {
-                    return;
-                }
-
-                addMessage(
-                    "You",
-                    "📷 Image selected for analysis."
-                );
-
-                try {
-
-                    const base64 =
-                        await fileToBase64(file);
-
-                    const imageReply =
-                        await analyzeImage(
-                            base64,
-                            file.type
-                        );
-
-                    addMessage(
-                        "J.A.R.V.I.S",
-                        imageReply
-                    );
-
-                    speak(imageReply);
-
-                } catch (error) {
-
-                    console.error(error);
-
-                    addMessage(
-                        "J.A.R.V.I.S",
-                        "I couldn't analyze that image."
-                    );
-                }
-
-                imgInput.value = "";
-            }
-        );
-    }
-
-    // ==============================
-    // FILE TO BASE64
-    // ==============================
-
-    function fileToBase64(file) {
-
-        return new Promise(
-            (resolve, reject) => {
-
-                const reader =
-                    new FileReader();
-
-                reader.onload = () => {
-
-                    const result =
-                        reader.result;
-
-                    resolve(
-                        result.split(",")[1]
-                    );
-                };
-
-                reader.onerror =
-                    reject;
-
-                reader.readAsDataURL(file);
-            }
-        );
-    }
-
-    // ==============================
-    // IMAGE ANALYSIS
-    // ==============================
-
-    async function analyzeImage(
-        base64,
-        mimeType
+    if (
+      /hour|hours|hr|hrs/.test(unit)
     ) {
-
-        if (!API_KEY) {
-
-            return "Gemini API key is missing.";
-        }
-
-        for (const model of MODELS) {
-
-            try {
-
-                const url =
-                    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
-
-                const response =
-                    await fetch(url, {
-
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-
-                            contents: [
-
-                                {
-                                    role: "user",
-
-                                    parts: [
-
-                                        {
-                                            text:
-                                                "Analyze this image and describe what you see clearly."
-                                        },
-
-                                        {
-                                            inline_data: {
-
-                                                mime_type:
-                                                    mimeType,
-
-                                                data:
-                                                    base64
-                                            }
-                                        }
-
-                                    ]
-                                }
-
-                            ]
-
-                        })
-                    });
-
-                const data =
-                    await response.json();
-
-                if (
-                    response.ok &&
-                    data.candidates &&
-                    data.candidates.length
-                ) {
-
-                    return data.candidates[0]
-                        .content
-                        .parts
-                        .map(
-                            part =>
-                                part.text || ""
-                        )
-                        .join("")
-                        .trim();
-                }
-
-            } catch (error) {
-
-                console.error(
-                    "Image analysis error:",
-                    error
-                );
-            }
-        }
-
-        return "I couldn't analyze the image.";
+      factor = 3600000;
     }
 
-    // ==============================
-    // CLEAR MEMORY
-    // ==============================
 
-    if (clearBtn) {
-
-        clearBtn.addEventListener(
-            "click",
-            () => {
-
-                const confirmed =
-                    confirm(
-                        "Delete all J.A.R.V.I.S memories?"
-                    );
-
-                if (!confirmed) {
-                    return;
-                }
-
-                PERMANENT_MEMORY = {};
-                CHAT_MEMORY = [];
-
-                savePermanentMemory();
-                saveChatMemory();
-
-                chat.innerHTML = "";
-
-                const message =
-                    "All saved memories have been cleared.";
-
-                addMessage(
-                    "J.A.R.V.I.S",
-                    message
-                );
-
-                speak(message);
-            }
-        );
+    if (
+      /second|seconds|sec|secs/.test(unit)
+    ) {
+      factor = 1000;
     }
 
-    // ==============================
-    // STARTUP
-    // ==============================
 
-    console.log(
-        "J.A.R.V.I.S SYSTEM ONLINE"
+    const duration =
+      amount * factor;
+
+
+    setTimeout(() => {
+
+      speak(
+        `Timer finished. ${amount} ${unit} completed, Boss.`
+      );
+
+      addMessage(
+        "J.A.R.V.I.S",
+        `Timer finished: ${amount} ${unit}.`
+      );
+
+    }, duration);
+
+
+    return (
+      `Timer set for ${amount} ${unit}, Boss.`
+    );
+  }
+
+
+  // ========================================
+  // TRANSLATE
+  // ========================================
+
+  if (
+    t.startsWith("translate")
+  ) {
+
+    const q =
+      text
+        .replace(
+          /translate\s*(this)?/i,
+          ""
+        )
+        .trim();
+
+
+    if (!q) {
+      return "What would you like me to translate, Boss?";
+    }
+
+
+    try {
+
+      const url =
+        "https://api.mymemory.translated.net/get?q=" +
+        encodeURIComponent(q) +
+        "&langpair=en|te";
+
+
+      const response =
+        await fetch(url);
+
+
+      const data =
+        await response.json();
+
+
+      return (
+        "In Telugu: " +
+        data.responseData.translatedText
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+      return "Translation service error, Boss.";
+    }
+  }
+
+
+  // ========================================
+  // YOUTUBE
+  // ========================================
+
+  if (
+    t.startsWith("play ") ||
+    t.includes("youtube")
+  ) {
+
+    let query =
+      text
+        .replace(
+          /youtube/ig,
+          ""
+        )
+        .replace(
+          /search/ig,
+          ""
+        )
+        .replace(
+          /play/ig,
+          ""
+        )
+        .trim();
+
+
+    if (!query) {
+
+      return (
+        "What would you like me to search for, Boss?"
+      );
+    }
+
+
+    const url =
+      "https://www.youtube.com/results?search_query=" +
+      encodeURIComponent(query);
+
+
+    window.open(
+      url,
+      "_blank"
     );
 
-    console.log(
-        "Permanent Memory:",
-        PERMANENT_MEMORY
+
+    return (
+      `Searching YouTube for ${query}, Boss.`
+    );
+  }
+
+
+  // ========================================
+  // REMEMBER
+  // ========================================
+
+  if (
+    t.startsWith("remember ")
+  ) {
+
+    const value =
+      text.substring(9).trim();
+
+
+    saveMemory(
+      "user_note",
+      value
     );
 
-    console.log(
-        "Chat Memory:",
-        CHAT_MEMORY
+
+    return (
+      "I will remember that, Boss."
+    );
+  }
+
+
+  // ========================================
+  // WHAT DO YOU REMEMBER
+  // ========================================
+
+  if (
+    t.includes("what do you remember") ||
+    t.includes("memory")
+  ) {
+
+    const memory =
+      getMemory("user_note");
+
+
+    if (!memory) {
+
+      return (
+        "I don't have any saved note yet, Boss."
+      );
+    }
+
+
+    return (
+      "I remember: " +
+      memory
+    );
+  }
+
+
+  // ========================================
+  // NO TOOL
+  // ========================================
+
+  return null;
+}
+
+
+// ==========================================
+// EXECUTE COMMAND
+// ==========================================
+
+async function executeCommand() {
+
+  if (!input) {
+    return;
+  }
+
+
+  const command =
+    input.value.trim();
+
+
+  if (!command) {
+
+    speak(
+      "Please enter a command, Boss."
     );
 
-});
+    return;
+  }
+
+
+  addMessage(
+    "YOU",
+    command
+  );
+
+
+  input.value = "";
+
+
+  try {
+
+    // First use local tools
+    const toolResult =
+      await handleTools(command);
+
+
+    if (toolResult) {
+
+      addMessage(
+        "J.A.R.V.I.S",
+        toolResult
+      );
+
+      speak(toolResult);
+
+      return;
+    }
+
+
+    // Otherwise use Gemini
+    addMessage(
+      "J.A.R.V.I.S",
+      "Processing..."
+    );
+
+
+    const reply =
+      await callGemini(command);
+
+
+    // Replace Processing...
+    const messages =
+      chat.querySelectorAll(".message");
+
+
+    if (messages.length) {
+
+      const last =
+        messages[messages.length - 1];
+
+      last.textContent =
+        "J.A.R.V.I.S: " + reply;
+
+    }
+
+
+    saveChat();
+
+    speak(reply);
+
+
+  } catch (error) {
+
+    console.error(
+      "Execute error:",
+      error
+    );
+
+
+    addMessage(
+      "J.A.R.V.I.S",
+      "I encountered a system error, Boss."
+    );
+
+
+    speak(
+      "I encountered a system error, Boss."
+    );
+  }
+}
+
+
+// ==========================================
+// VOICE INPUT
+// ==========================================
+
+let recognition = null;
+
+
+function startListening() {
+
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+
+  if (!SpeechRecognition) {
+
+    alert(
+      "Voice recognition is not supported in this browser."
+    );
+
+    return;
+  }
+
+
+  recognition =
+    new SpeechRecognition();
+
+
+  recognition.lang =
+    "en-IN";
+
+
+  recognition.continuous =
+    false;
+
+
+  recognition.interimResults =
+    false;
+
+
+  recognition.onstart =
+    () => {
+
+      if (micBtn) {
+        micBtn.textContent =
+          "🔴";
+      }
+
+    };
+
+
+  recognition.onresult =
+    event => {
+
+      const transcript =
+        event.results[0][0].transcript;
+
+
+      if (input) {
+        input.value =
+          transcript;
+      }
+
+
+      executeCommand();
+
+    };
+
+
+  recognition.onerror =
+    event => {
+
+      console.error(
+        "Voice error:",
+        event.error
+      );
+
+    };
+
+
+  recognition.onend =
+    () => {
+
+      if (micBtn) {
+        micBtn.textContent =
+          "🎙️";
+      }
+
+    };
+
+
+  recognition.start();
+}
+
+
+// ==========================================
+// CAMERA / IMAGE INPUT
+// ==========================================
+
+function openCamera() {
+
+  if (!imageInput) {
+    return;
+  }
+
+  imageInput.click();
+}
+
+
+if (imageInput) {
+
+  imageInput.addEventListener(
+    "change",
+    event => {
+
+      const file =
+        event.target.files[0];
+
+
+      if (!file) {
+        return;
+      }
+
+
+      addMessage(
+        "YOU",
+        "Image selected: " + file.name
+      );
+
+
+      speak(
+        "Image received, Boss."
+      );
+
+
+      // Reset input so same image can be selected again
+      imageInput.value = "";
+
+    }
+  );
+}
+
+
+// ==========================================
+// BUTTON EVENTS
+// ==========================================
+
+if (sendBtn) {
+
+  sendBtn.addEventListener(
+    "click",
+    executeCommand
+  );
+}
+
+
+if (input) {
+
+  input.addEventListener(
+    "keydown",
+    event => {
+
+      if (event.key === "Enter") {
+
+        event.preventDefault();
+
+        executeCommand();
+      }
+
+    }
+  );
+}
+
+
+if (micBtn) {
+
+  micBtn.addEventListener(
+    "click",
+    startListening
+  );
+}
+
+
+if (camBtn) {
+
+  camBtn.addEventListener(
+    "click",
+    openCamera
+  );
+}
+
+
+if (clearBtn) {
+
+  clearBtn.addEventListener(
+    "click",
+    () => {
+
+      localStorage.removeItem(
+        "jarvis_memory"
+      );
+
+      localStorage.removeItem(
+        "jarvis_chat"
+      );
+
+
+      if (chat) {
+        chat.innerHTML = "";
+      }
+
+
+      speak(
+        "Long term memory cleared, Boss."
+      );
+
+    }
+  );
+}
+
+
+// ==========================================
+// LOAD SAVED CHAT
+// ==========================================
+
+loadChat();
+
+
+// ==========================================
+// LOAD VOICES
+// ==========================================
+
+if (
+  "speechSynthesis" in window
+) {
+
+  window.speechSynthesis.onvoiceschanged =
+    () => {
+
+      window.speechSynthesis.getVoices();
+
+    };
+
+}
+
+
+console.log(
+  "J.A.R.V.I.S SYSTEM READY"
+);
