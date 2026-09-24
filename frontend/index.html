@@ -3,9 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-
     <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+          content="width=device-width, initial-scale=1">
 
     <title>J.A.R.V.I.S</title>
 
@@ -19,19 +18,17 @@
         <p>PERSONAL AI ASSISTANT</p>
     </header>
 
-
+    <!-- CORE -->
     <div class="core">
         <div class="ring r1"></div>
         <div class="ring r2"></div>
         <div class="center"></div>
     </div>
 
-
-    <p class="core-text">
-        SYSTEM READY
-    </p>
+    <p class="core-text">SYSTEM READY</p>
 
 
+    <!-- SYSTEM STATUS -->
     <div class="status">
 
         <h2>SYSTEM DIAGNOSTICS</h2>
@@ -59,18 +56,18 @@
     </div>
 
 
-    <!-- CHAT AREA -->
+    <!-- CHAT -->
     <div class="chat" id="chat"></div>
 
 
-    <!-- INPUT AREA -->
+    <!-- COMMAND AREA -->
     <div class="input-area">
 
         <input
             id="msg"
             type="text"
-            placeholder="Enter a command for J.A.R.V.I.S..."
             autocomplete="off"
+            placeholder="Enter a command for J.A.R.V.I.S..."
         >
 
         <button id="send">
@@ -80,42 +77,34 @@
         <button
             id="mic-btn"
             type="button"
-            aria-label="Activate voice input"
-        >
+            aria-label="Activate voice input">
             🎙️
         </button>
 
         <button
             id="cam-btn"
             type="button"
-            aria-label="Analyze image"
-        >
+            aria-label="Analyze image">
             📷
         </button>
 
         <button
             id="clear-btn"
-            type="button"
-        >
+            type="button">
             CLEAR MEMORY
         </button>
 
-
-        <!-- CAMERA / IMAGE INPUT -->
         <input
             id="img-input"
             type="file"
             accept="image/*"
-            capture="environment"
             style="display:none"
         >
 
     </div>
 
 
-    <!-- JAVASCRIPT -->
     <script src="script.js"></script>
 
 </body>
-
 </html>
