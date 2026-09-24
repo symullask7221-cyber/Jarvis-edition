@@ -1,23 +1,17 @@
 // ==========================================
 // J.A.R.V.I.S MOBILE EDITION
 // COMPLETE SCRIPT
+// WhatsApp + Contacts + Voice
 // ==========================================
 
 console.log("J.A.R.V.I.S loading...");
-
 
 // ==========================================
 // SETTINGS
 // ==========================================
 
-// Gemini API key
-// First time you use AI, JARVIS will ask for it.
-
 let API_KEY = localStorage.getItem("jarvis_key") || "";
-
-// Current Google Gemini model
 const MODEL = "gemini-3.6-flash";
-
 
 // ==========================================
 // ELEMENTS
@@ -31,35 +25,27 @@ const camBtn = document.getElementById("cam-btn");
 const clearBtn = document.getElementById("clear-btn");
 const imageInput = document.getElementById("img-input");
 
-
 // ==========================================
 // SPEAK
 // ==========================================
 
 function speak(text) {
 
-  if (!("speechSynthesis" in window)) {
-    console.log("Speech synthesis not supported");
-    return;
-  }
+  if (!("speechSynthesis" in window)) return;
 
   window.speechSynthesis.cancel();
 
-  const speech =
-    new SpeechSynthesisUtterance(text);
+  const speech = new SpeechSynthesisUtterance(text);
 
   speech.rate = 0.92;
   speech.pitch = 0.75;
   speech.volume = 1;
 
-  const voices =
-    window.speechSynthesis.getVoices();
+  const voices = window.speechSynthesis.getVoices();
 
-  // Try to find an English voice
-  const voice =
-    voices.find(v =>
-      /en-US|en-GB|English/i.test(v.lang)
-    );
+  const voice = voices.find(v =>
+    /en-US|en-GB|English/i.test(v.lang)
+  );
 
   if (voice) {
     speech.voice = voice;
@@ -67,7 +53,6 @@ function speak(text) {
 
   window.speechSynthesis.speak(speech);
 }
-
 
 // ==========================================
 // ADD MESSAGE
@@ -77,37 +62,27 @@ function addMessage(sender, message) {
 
   if (!chat) return;
 
-  const box =
-    document.createElement("div");
-
+  const box = document.createElement("div");
   box.className = "message";
 
-  const title =
-    document.createElement("strong");
+  const title = document.createElement("strong");
+  title.textContent = sender + ":";
 
-  title.textContent =
-    sender + ":";
-
-  const text =
-    document.createElement("span");
-
-  text.textContent =
-    " " + message;
+  const text = document.createElement("span");
+  text.textContent = " " + message;
 
   box.appendChild(title);
   box.appendChild(text);
 
   chat.appendChild(box);
 
-  chat.scrollTop =
-    chat.scrollHeight;
+  chat.scrollTop = chat.scrollHeight;
 
   saveChat();
 }
 
-
 // ==========================================
-// SAVE CHAT
+// SAVE / LOAD CHAT
 // ==========================================
 
 function saveChat() {
@@ -120,34 +95,41 @@ function saveChat() {
   );
 }
 
-
-// ==========================================
-// LOAD CHAT
-// ==========================================
-
 function loadChat() {
 
   const saved =
     localStorage.getItem("jarvis_chat");
 
   if (saved && chat) {
+
     chat.innerHTML = saved;
+
     chat.scrollTop =
       chat.scrollHeight;
   }
 }
 
-
 // ==========================================
 // MEMORY
 // ==========================================
 
-function saveMemory(key, value) {
+function getAllMemory() {
 
-  let memory =
-    JSON.parse(
+  try {
+
+    return JSON.parse(
       localStorage.getItem("jarvis_memory") || "{}"
     );
+
+  } catch {
+
+    return {};
+  }
+}
+
+function saveMemory(key, value) {
+
+  const memory = getAllMemory();
 
   memory[key] = value;
 
@@ -157,28 +139,130 @@ function saveMemory(key, value) {
   );
 }
 
-
 function getMemory(key) {
 
-  let memory =
-    JSON.parse(
-      localStorage.getItem("jarvis_memory") || "{}"
-    );
+  const memory = getAllMemory();
 
   return memory[key] || null;
 }
 
+// ==========================================
+// CONTACTS
+// ==========================================
+
+function saveContact(name, number) {
+
+  const contacts =
+    JSON.parse(
+      localStorage.getItem("jarvis_contacts") || "{}"
+    );
+
+  const cleanName =
+    name.trim().toLowerCase();
+
+  let cleanNumber =
+    number.replace(/\D/g, "");
+
+  // India number
+  if (cleanNumber.length === 10) {
+    cleanNumber = "91" + cleanNumber;
+  }
+
+  contacts[cleanName] = cleanNumber;
+
+  localStorage.setItem(
+    "jarvis_contacts",
+    JSON.stringify(contacts)
+  );
+}
+
+function getContact(name) {
+
+  const contacts =
+    JSON.parse(
+      localStorage.getItem("jarvis_contacts") || "{}"
+    );
+
+  return contacts[name.trim().toLowerCase()] || null;
+}
+
+function getAllContacts() {
+
+  return JSON.parse(
+    localStorage.getItem("jarvis_contacts") || "{}"
+  );
+}
+
+function deleteContact(name) {
+
+  const contacts = getAllContacts();
+
+  const key = name.trim().toLowerCase();
+
+  if (!contacts[key]) {
+    return false;
+  }
+
+  delete contacts[key];
+
+  localStorage.setItem(
+    "jarvis_contacts",
+    JSON.stringify(contacts)
+  );
+
+  return true;
+}
 
 // ==========================================
-// GEMINI AI
+// WHATSAPP
+// ==========================================
+
+function openWhatsApp(number, message) {
+
+  let cleanNumber =
+    number.replace(/\D/g, "");
+
+  if (cleanNumber.length === 10) {
+    cleanNumber = "91" + cleanNumber;
+  }
+
+  const url =
+    "https://wa.me/" +
+    cleanNumber +
+    "?text=" +
+    encodeURIComponent(message);
+
+  window.location.href = url;
+}
+
+function openWhatsAppContact(name, message) {
+
+  const number = getContact(name);
+
+  if (!number) {
+
+    return (
+      `I don't have ${name} in my JARVIS contacts, Boss. ` +
+      `Say: remember contact ${name} as 9876543210.`
+    );
+  }
+
+  openWhatsApp(number, message);
+
+  return (
+    `Opening WhatsApp for ${name}, Boss.`
+  );
+}
+
+// ==========================================
+// GEMINI
 // ==========================================
 
 async function callGemini(prompt) {
 
   if (!API_KEY) {
 
-    API_KEY =
-      promptForApiKey();
+    API_KEY = promptForApiKey();
 
     if (!API_KEY) {
       return "Gemini API key is required, Boss.";
@@ -190,10 +274,8 @@ async function callGemini(prompt) {
     );
   }
 
-
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
-
 
   const response =
     await fetch(url, {
@@ -217,23 +299,18 @@ async function callGemini(prompt) {
         },
 
         contents: [
-
           {
             role: "user",
-
             parts: [
               {
                 text: prompt
               }
             ]
           }
-
         ]
 
       })
-
     });
-
 
   if (!response.ok) {
 
@@ -249,8 +326,10 @@ async function callGemini(prompt) {
       return "The Gemini API request is invalid, Boss.";
     }
 
-    if (response.status === 401 ||
-        response.status === 403) {
+    if (
+      response.status === 401 ||
+      response.status === 403
+    ) {
 
       localStorage.removeItem(
         "jarvis_key"
@@ -262,16 +341,14 @@ async function callGemini(prompt) {
     }
 
     if (response.status === 429) {
-      return "Gemini quota is currently unavailable, Boss. Please try again later.";
+      return "Gemini quota is currently unavailable, Boss.";
     }
 
     return "Gemini service error, Boss.";
   }
 
-
   const data =
     await response.json();
-
 
   const reply =
     data?.candidates?.[0]?.content?.parts
@@ -279,18 +356,15 @@ async function callGemini(prompt) {
       .join("")
       .trim();
 
-
   if (!reply) {
     return "I did not receive a response from Gemini, Boss.";
   }
 
-
   return reply;
 }
 
-
 // ==========================================
-// API KEY PROMPT
+// API KEY
 // ==========================================
 
 function promptForApiKey() {
@@ -298,13 +372,10 @@ function promptForApiKey() {
   const key =
     prompt("Enter your Gemini API Key:");
 
-  if (!key) {
-    return "";
-  }
+  if (!key) return "";
 
   return key.trim();
 }
-
 
 // ==========================================
 // TOOLS
@@ -314,7 +385,6 @@ async function handleTools(text) {
 
   const t =
     text.toLowerCase().trim();
-
 
   // ========================================
   // TIME
@@ -332,7 +402,6 @@ async function handleTools(text) {
       ", Boss."
     );
   }
-
 
   // ========================================
   // WEATHER
@@ -354,7 +423,6 @@ async function handleTools(text) {
         return;
       }
 
-
       navigator.geolocation.getCurrentPosition(
 
         async position => {
@@ -367,29 +435,21 @@ async function handleTools(text) {
             const lon =
               position.coords.longitude;
 
-
             const url =
               `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m`;
-
 
             const response =
               await fetch(url);
 
-
             if (!response.ok) {
-              throw new Error(
-                "Weather request failed"
-              );
+              throw new Error("Weather failed");
             }
-
 
             const data =
               await response.json();
 
-
             const temperature =
               data.current.temperature_2m;
-
 
             resolve(
               `The current temperature is ${temperature} degrees Celsius, Boss.`
@@ -411,14 +471,10 @@ async function handleTools(text) {
           resolve(
             "Please allow location permission for weather, Boss."
           );
-
         }
-
       );
-
     });
   }
-
 
   // ========================================
   // TIMER
@@ -429,7 +485,6 @@ async function handleTools(text) {
       /(\d+)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/i
     );
 
-
   if (
     (t.includes("timer") ||
      t.includes("టైమర్")) &&
@@ -439,31 +494,21 @@ async function handleTools(text) {
     const amount =
       parseInt(timerMatch[1]);
 
-
     const unit =
       timerMatch[2].toLowerCase();
 
-
     let factor = 60000;
 
-
-    if (
-      /hour|hours|hr|hrs/.test(unit)
-    ) {
+    if (/hour|hours|hr|hrs/.test(unit)) {
       factor = 3600000;
     }
 
-
-    if (
-      /second|seconds|sec|secs/.test(unit)
-    ) {
+    if (/second|seconds|sec|secs/.test(unit)) {
       factor = 1000;
     }
 
-
     const duration =
       amount * factor;
-
 
     setTimeout(() => {
 
@@ -478,34 +523,25 @@ async function handleTools(text) {
 
     }, duration);
 
-
     return (
       `Timer set for ${amount} ${unit}, Boss.`
     );
   }
 
-
   // ========================================
   // TRANSLATE
   // ========================================
 
-  if (
-    t.startsWith("translate")
-  ) {
+  if (t.startsWith("translate")) {
 
     const q =
       text
-        .replace(
-          /translate\s*(this)?/i,
-          ""
-        )
+        .replace(/translate\s*(this)?/i, "")
         .trim();
-
 
     if (!q) {
       return "What would you like me to translate, Boss?";
     }
-
 
     try {
 
@@ -514,14 +550,11 @@ async function handleTools(text) {
         encodeURIComponent(q) +
         "&langpair=en|te";
 
-
       const response =
         await fetch(url);
 
-
       const data =
         await response.json();
-
 
       return (
         "In Telugu: " +
@@ -530,15 +563,151 @@ async function handleTools(text) {
 
     } catch (error) {
 
-      console.error(error);
-
       return "Translation service error, Boss.";
     }
   }
 
+  // ========================================
+  // CONTACT: SAVE
+  // ========================================
+
+  const saveContactMatch =
+    text.match(
+      /^(?:remember|save)\s+(?:contact\s+)?(.+?)\s+(?:as|number)\s+(\+?\d[\d\s-]{8,})$/i
+    );
+
+  if (saveContactMatch) {
+
+    const name =
+      saveContactMatch[1].trim();
+
+    const number =
+      saveContactMatch[2].trim();
+
+    saveContact(name, number);
+
+    return (
+      `Contact ${name} has been saved, Boss.`
+    );
+  }
 
   // ========================================
-  // YOUTUBE
+  // CONTACT: SHOW
+  // ========================================
+
+  if (
+    t === "show contacts" ||
+    t === "show my contacts" ||
+    t === "list contacts"
+  ) {
+
+    const contacts =
+      getAllContacts();
+
+    const names =
+      Object.keys(contacts);
+
+    if (!names.length) {
+
+      return (
+        "There are no JARVIS contacts saved yet, Boss."
+      );
+    }
+
+    return (
+      "Your JARVIS contacts are: " +
+      names.join(", ") +
+      "."
+    );
+  }
+
+  // ========================================
+  // CONTACT: DELETE
+  // ========================================
+
+  const deleteMatch =
+    text.match(
+      /^(?:delete|remove)\s+(?:contact\s+)?(.+)$/i
+    );
+
+  if (deleteMatch) {
+
+    const name =
+      deleteMatch[1].trim();
+
+    if (deleteContact(name)) {
+
+      return (
+        `Contact ${name} deleted, Boss.`
+      );
+    }
+
+    return (
+      `I couldn't find ${name}, Boss.`
+    );
+  }
+
+  // ========================================
+  // WHATSAPP BY NUMBER
+  // ========================================
+
+  const whatsappNumberMatch =
+    text.match(
+      /^(?:send\s+)?whatsapp\s+(?:message\s+)?(?:to\s+)?(\+?\d[\d\s-]{8,})(?:\s+(?:saying|message|that)\s+)(.+)$/i
+    );
+
+  if (whatsappNumberMatch) {
+
+    const number =
+      whatsappNumberMatch[1].trim();
+
+    const message =
+      whatsappNumberMatch[2].trim();
+
+    openWhatsApp(number, message);
+
+    return (
+      "Opening WhatsApp with your message, Boss."
+    );
+  }
+
+  // ========================================
+  // WHATSAPP BY CONTACT NAME
+  // ========================================
+
+  const whatsappNameMatch =
+    text.match(
+      /^(?:send\s+)?whatsapp\s+(?:message\s+)?(?:to\s+)?(.+?)\s+(?:saying|message|that)\s+(.+)$/i
+    );
+
+  if (whatsappNameMatch) {
+
+    const name =
+      whatsappNameMatch[1].trim();
+
+    const message =
+      whatsappNameMatch[2].trim();
+
+    const number =
+      getContact(name);
+
+    if (!number) {
+
+      return (
+        `I don't have ${name} saved, Boss. ` +
+        `Say: remember contact ${name} as 9876543210.`
+      );
+    }
+
+    openWhatsApp(number, message);
+
+    return (
+      `Opening WhatsApp for ${name}, Boss.`
+    );
+  }
+
+  // ========================================
+  // PLAY YOUTUBE
   // ========================================
 
   if (
@@ -548,82 +717,56 @@ async function handleTools(text) {
 
     let query =
       text
-        .replace(
-          /youtube/ig,
-          ""
-        )
-        .replace(
-          /search/ig,
-          ""
-        )
-        .replace(
-          /play/ig,
-          ""
-        )
+        .replace(/youtube/ig, "")
+        .replace(/search/ig, "")
+        .replace(/play/ig, "")
         .trim();
 
-
     if (!query) {
-
-      return (
-        "What would you like me to search for, Boss?"
-      );
+      return "What would you like me to search for, Boss?";
     }
-
 
     const url =
       "https://www.youtube.com/results?search_query=" +
       encodeURIComponent(query);
 
-
-    window.open(
-      url,
-      "_blank"
-    );
-
+    window.open(url, "_blank");
 
     return (
       `Searching YouTube for ${query}, Boss.`
     );
   }
 
-
   // ========================================
-  // REMEMBER
+  // SIMPLE MEMORY
   // ========================================
 
-  if (
-    t.startsWith("remember ")
-  ) {
+  if (t.startsWith("remember ")) {
 
     const value =
       text.substring(9).trim();
-
 
     saveMemory(
       "user_note",
       value
     );
 
-
     return (
       "I will remember that, Boss."
     );
   }
 
-
   // ========================================
-  // WHAT DO YOU REMEMBER
+  // MEMORY
   // ========================================
 
   if (
     t.includes("what do you remember") ||
-    t.includes("memory")
+    t === "memory"
   ) {
 
     const memory =
       getMemory("user_note");
-
 
     if (!memory) {
 
@@ -632,13 +775,10 @@ async function handleTools(text) {
       );
     }
 
-
     return (
-      "I remember: " +
-      memory
+      "I remember: " + memory
     );
   }
-
 
   // ========================================
   // NO TOOL
@@ -647,21 +787,16 @@ async function handleTools(text) {
   return null;
 }
 
-
 // ==========================================
 // EXECUTE COMMAND
 // ==========================================
 
 async function executeCommand() {
 
-  if (!input) {
-    return;
-  }
+  if (!input) return;
 
-
-  const command =
+  let command =
     input.value.trim();
-
 
   if (!command) {
 
@@ -672,22 +807,26 @@ async function executeCommand() {
     return;
   }
 
+  // Remove Hey JARVIS
+  command =
+    command
+      .replace(
+        /^hey\s+jarvis[\s,]*/i,
+        ""
+      )
+      .trim();
 
   addMessage(
     "YOU",
     command
   );
 
-
   input.value = "";
-
 
   try {
 
-    // First use local tools
     const toolResult =
       await handleTools(command);
-
 
     if (toolResult) {
 
@@ -701,22 +840,16 @@ async function executeCommand() {
       return;
     }
 
-
-    // Otherwise use Gemini
     addMessage(
       "J.A.R.V.I.S",
       "Processing..."
     );
 
-
     const reply =
       await callGemini(command);
 
-
-    // Replace Processing...
     const messages =
       chat.querySelectorAll(".message");
-
 
     if (messages.length) {
 
@@ -725,14 +858,11 @@ async function executeCommand() {
 
       last.textContent =
         "J.A.R.V.I.S: " + reply;
-
     }
-
 
     saveChat();
 
     speak(reply);
-
 
   } catch (error) {
 
@@ -741,12 +871,10 @@ async function executeCommand() {
       error
     );
 
-
     addMessage(
       "J.A.R.V.I.S",
       "I encountered a system error, Boss."
     );
-
 
     speak(
       "I encountered a system error, Boss."
@@ -754,20 +882,17 @@ async function executeCommand() {
   }
 }
 
-
 // ==========================================
 // VOICE INPUT
 // ==========================================
 
 let recognition = null;
 
-
 function startListening() {
 
   const SpeechRecognition =
     window.SpeechRecognition ||
     window.webkitSpeechRecognition;
-
 
   if (!SpeechRecognition) {
 
@@ -778,33 +903,26 @@ function startListening() {
     return;
   }
 
-
   recognition =
     new SpeechRecognition();
-
 
   recognition.lang =
     "en-IN";
 
-
   recognition.continuous =
     false;
 
-
   recognition.interimResults =
     false;
-
 
   recognition.onstart =
     () => {
 
       if (micBtn) {
-        micBtn.textContent =
-          "🔴";
+        micBtn.textContent = "🔴";
       }
 
     };
-
 
   recognition.onresult =
     event => {
@@ -812,17 +930,12 @@ function startListening() {
       const transcript =
         event.results[0][0].transcript;
 
-
       if (input) {
-        input.value =
-          transcript;
+        input.value = transcript;
       }
 
-
       executeCommand();
-
     };
-
 
   recognition.onerror =
     event => {
@@ -831,38 +944,29 @@ function startListening() {
         "Voice error:",
         event.error
       );
-
     };
-
 
   recognition.onend =
     () => {
 
       if (micBtn) {
-        micBtn.textContent =
-          "🎙️";
+        micBtn.textContent = "🎙️";
       }
-
     };
-
 
   recognition.start();
 }
 
-
 // ==========================================
-// CAMERA / IMAGE INPUT
+// CAMERA
 // ==========================================
 
 function openCamera() {
 
-  if (!imageInput) {
-    return;
-  }
+  if (!imageInput) return;
 
   imageInput.click();
 }
-
 
 if (imageInput) {
 
@@ -873,30 +977,21 @@ if (imageInput) {
       const file =
         event.target.files[0];
 
-
-      if (!file) {
-        return;
-      }
-
+      if (!file) return;
 
       addMessage(
         "YOU",
         "Image selected: " + file.name
       );
 
-
       speak(
         "Image received, Boss."
       );
 
-
-      // Reset input so same image can be selected again
       imageInput.value = "";
-
     }
   );
 }
-
 
 // ==========================================
 // BUTTON EVENTS
@@ -910,7 +1005,6 @@ if (sendBtn) {
   );
 }
 
-
 if (input) {
 
   input.addEventListener(
@@ -923,11 +1017,9 @@ if (input) {
 
         executeCommand();
       }
-
     }
   );
 }
-
 
 if (micBtn) {
 
@@ -937,7 +1029,6 @@ if (micBtn) {
   );
 }
 
-
 if (camBtn) {
 
   camBtn.addEventListener(
@@ -945,7 +1036,6 @@ if (camBtn) {
     openCamera
   );
 }
-
 
 if (clearBtn) {
 
@@ -961,35 +1051,28 @@ if (clearBtn) {
         "jarvis_chat"
       );
 
+      localStorage.removeItem(
+        "jarvis_contacts"
+      );
 
       if (chat) {
         chat.innerHTML = "";
       }
 
-
       speak(
-        "Long term memory cleared, Boss."
+        "Memory and contacts cleared, Boss."
       );
-
     }
   );
 }
 
-
 // ==========================================
-// LOAD SAVED CHAT
+// LOAD
 // ==========================================
 
 loadChat();
 
-
-// ==========================================
-// LOAD VOICES
-// ==========================================
-
-if (
-  "speechSynthesis" in window
-) {
+if ("speechSynthesis" in window) {
 
   window.speechSynthesis.onvoiceschanged =
     () => {
@@ -997,9 +1080,7 @@ if (
       window.speechSynthesis.getVoices();
 
     };
-
 }
-
 
 console.log(
   "J.A.R.V.I.S SYSTEM READY"
